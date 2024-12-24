@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+
+import sys
+
+LEVEL_DISCARD = True
+
+
+def main():
+  safe_count = 0
+  with open("input.txt") as f:
+    for line in f:
+      report = [int(_) for _ in line.split(" ")]
+      if _is_report_safe(report):
+        safe_count += 1
+      # If in part 2, check again with 1 element removed.
+      # Not proud but we will brute force and try removing each element 1 by 1
+      elif LEVEL_DISCARD:
+        for i in range(len(report)):
+          abridged_report = report[:]
+          abridged_report.pop(i)
+          if _is_report_safe(abridged_report):
+            safe_count += 1
+            break
+
+  print("Safe count: %d" % safe_count)
+
+
+def _is_report_safe(report):
+  prev_level = report[0]
+  increasing = None
+  is_safe = True
+  for i in range(1, len(report)):
+     level = report[i]
+     diff = level - prev_level
+     if diff == 0 or diff < -3 or diff > 3:
+       is_safe = False
+     elif increasing is None:
+       increasing = diff > 0
+     elif increasing and diff < 0 or not increasing and diff > 0:
+       is_safe = False
+    
+     if not is_safe:
+       break
+
+     prev_level = level
+
+  return is_safe
+
+
+if __name__=="__main__":
+  main()
