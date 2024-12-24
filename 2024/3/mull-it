@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+
+import re
+
+RESPECT_DOS_DONTS = True
+
+
+def main():
+  pattern = re.compile(r"(?:mul\((\d+),(\d+)\)|(don't)\(\)|(do)\(\))")
+  accumulator = 0
+  do = True
+  with open("input.txt") as f:
+    for line in f:
+      matches = pattern.findall(line)
+      for m in matches:
+        if m[2]:
+          # don't
+          do = False
+        elif m[3]:
+          # do
+          do = True
+        else:
+          arg1, arg2 = [int(_) for _ in m[:2]]
+          if do or not RESPECT_DOS_DONTS:
+            accumulator += arg1 * arg2
+
+  print(accumulator)
+
+
+if __name__=="__main__":
+  main()
