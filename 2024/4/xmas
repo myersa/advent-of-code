@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/4
+
+
+RIGHT      = ( 0,  1)
+UP         = (-1,  0)
+LEFT       = ( 0, -1)
+DOWN       = ( 1,  0)
+UP_RIGHT   = (-1,  1)
+UP_LEFT    = (-1, -1)
+DOWN_LEFT  = ( 1, -1)
+DOWN_RIGHT = ( 1,  1)
+
+
+def main():
+  # Read all chars into a "2D array" (actually list of chars)
+  chars = []
+  with open("input.txt") as f:
+    for line in f:
+      chars.append(line.rstrip())
+
+  height = len(chars)
+  width = len(chars[0])
+
+  found = _part1(chars, height, width)
+  print("Part 1: %d" % found)
+  found = _part2(chars, height, width)
+  print("Part 2: %d" % found)
+
+
+def _part1(chars, height, width):
+  # Search for 'X' and then check all adjecents for 'M', etc.
+  def _search(row, col, search_str="XMAS", directions=None):
+    if chars[row][col] != search_str[0]:
+      # wrong character
+      return 0
+
+    if len(search_str) == 1:
+      # last character found
+      return 1
+
+    if directions is None:
+      directions = [RIGHT, UP_RIGHT, UP, UP_LEFT, LEFT, DOWN_LEFT, DOWN, DOWN_RIGHT]
+
+    found = 0
+    for direction in directions:
+      newrow = row + direction[0]
+      newcol = col + direction[1]
+      if 0 <= newrow < height and 0 <= newcol < width:
+        # search for next letter, in one specific direction
+        found += _search(newrow, newcol, search_str[1:], [direction]) 
+
+    return found
+
+  found = 0
+  for row in range(height):
+    for col in range(width):
+      found += _search(row, col)
+
+  return found
+
+
+def _part2(chars, height, width):
+  def _findx(row, col):
+    # Middle character must be 'A'
+    if chars[row][col] != 'A':
+      return 0
+
+    # Check both diagonals
+    backslash_chars = set()
+    foreslash_chars = set()
+    for the_set, directions in [
+        (foreslash_chars, [DOWN_LEFT,  UP_RIGHT]),
+        (backslash_chars, [DOWN_RIGHT, UP_LEFT])
+      ]:
+      for direction in directions:
+        the_set.add(chars[row + direction[0]][col + direction[1]])
+      if 'M' not in the_set or 'S' not in the_set:
+        return 0
+
+    return 1
+
+  # Avoid edges
+  found = 0
+  for row in range(1, height-1):
+    for col in range(1, width-1):
+      found += _findx(row, col)
+
+  return found
+
+
+if __name__=="__main__":
+  main()
