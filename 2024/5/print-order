@@ -1,0 +1,93 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/5
+
+
+def _read_input():
+  rules = []
+  updates = []
+  with open("input.txt") as f:
+    for line in f:
+      line = line.rstrip()
+
+      if not line:
+        # end of first section
+        break
+
+      rules.append(tuple(int(_) for _ in line.split("|")))
+
+    for line in f:
+      updates.append([int(_) for _ in line.split(",")])
+
+  return rules, updates
+
+
+def _is_update_valid(update, rules_dict):
+  # Keep set of pages seen before, then make sure none are in pages_after for each page
+  pages_seen = set()
+  for page in update:
+    pages_after = rules_dict.get(page)
+    if pages_after is not None and not pages_seen.isdisjoint(pages_after):
+      return False
+    pages_seen.add(page)
+  return True
+
+
+def _fix_invalid_update(update, rules_dict):
+  while True:
+    corrections = 0
+    pages_seen = set()
+    corrected = update[:]
+    for page in update:
+      pages_after = rules_dict.get(page)
+      if pages_after is not None:
+        for page_too_early in pages_seen.intersection(pages_after):
+          # Move 'page' to before 'page_too_early'
+          corrected.remove(page)
+          corrected.insert(corrected.index(page_too_early), page)
+          corrections += 1
+         
+      pages_seen.add(page)
+
+    if corrections == 0:
+      break
+
+    update = corrected
+
+  return update
+
+
+def _sum_middle_pages(updates):
+  result = 0
+  for update in updates:
+    result += update[int(len(update) / 2)]
+  return result
+
+
+def main():
+  rules, updates = _read_input()
+
+  # process rules into a dictionary of page -> pages_after
+  rules_dict = {}
+  for page, page_after in rules:
+    rules_dict.setdefault(page, set()).add(page_after)
+
+  # check updates
+  valid_updates = []
+  invalid_updates = []
+  for update in updates:
+     the_list = valid_updates if _is_update_valid(update, rules_dict) else invalid_updates
+     the_list.append(update)
+    
+  # (Part 1) compute answer: sum of middle page numbers in each valid update. Fortunately all are odd #s of pages
+  print("Part 1: %d" % _sum_middle_pages(valid_updates))
+
+  # (Part 2) correct invalid updates
+  corrected = []
+  for update in invalid_updates:
+    corrected.append(_fix_invalid_update(update, rules_dict))
+
+  print("Part 2: %d" % _sum_middle_pages(corrected))
+
+
+if __name__=="__main__":
+  main()
