@@ -1,0 +1,105 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/7
+
+import math
+import numpy as np
+import operator
+
+PART2 = True
+OPS = [operator.add, operator.mul]
+
+def _concat(arg1, arg2):
+  shift = len(str(arg2))
+  return int(arg1 * math.pow(10, shift) + arg2)
+
+if PART2:
+  OPS.append(_concat)
+
+
+def _read_input():
+  equations = []
+  with open("input.txt") as f:
+    for line in f:
+      line = line.rstrip()
+      result, rest = line.split(": ", 1)
+      result = int(result)
+      the_args = [int(_) for _ in rest.split(" ")]
+      equations.append((result, the_args))
+  return equations
+
+
+def _bin_to_ops(bin_code, ops_count):
+  """
+  Convert a binary code to an array of operators.
+  op[0] corresponds to the LOWEST bit in bincode.
+  """
+  mask = 1
+  ops = []
+  for _ in range(ops_count):
+    opcode = bin_code & mask != 0
+    ops.append(OPS[opcode])
+    mask <<= 1
+  return ops
+
+
+def _tern_to_ops(tern_code, ops_count):
+  """
+  Convert a TERNARY code to an array of operators (for part 2).
+  As with _bin_to_ops, ops[0] is the least-significant opcode.
+  """
+  tern_string = np.base_repr(tern_code, 3)
+  reversed_tern_string = reversed(tern_string)
+  ops = []
+  # Take least significant digit first. Iterate from last index to 0
+  for c in reversed_tern_string:
+    opcode = int(c)
+    ops.append(OPS[opcode])
+  # Pad with OPS[0]
+  for _ in range(ops_count - len(tern_string)):
+    ops.append(OPS[0])
+  return ops
+
+
+def _compute(the_args, ops):
+  result = the_args[0]
+  for i in range(1, len(the_args)):
+    op = ops[i-1]
+    next_arg = the_args[i]
+    result = op(result, next_arg)
+  return result
+
+
+def _is_equation_valid(equation):
+  # For N the_args there are N-1 operators and 2^(N-1) (or 3^... for part 2) possible operator combinations
+  result, the_args = equation[:]
+
+  def _bin_to_str(ops_code):
+    return bin(ops_code)
+
+  def _tern_to_str(ops_code):
+    return "0t" + np.base_repr(ops_code, 3)
+
+  ops_code_to_str = _bin_to_str if not PART2 else _tern_to_str
+  ops_code_to_ops = _bin_to_ops if not PART2 else _tern_to_ops
+
+  ops_count = len(the_args) - 1
+  ops_code = 0
+  for _ in range(int(math.pow(len(OPS), len(the_args)-1))):
+    ops = ops_code_to_ops(ops_code, ops_count)
+    if _compute(the_args, ops) == result:
+      print("Valid: %d with ops %s" % (result, ops_code_to_str(ops_code)))
+      return True
+    ops_code += 1
+  return False
+
+
+def main():
+  equations = _read_input()
+  valid_equations = [_ for _ in equations if _is_equation_valid(_)] 
+  results_sum = sum([_[0] for _ in valid_equations])
+  print("%d valid equations." % len(valid_equations))
+  print("Sum of valid equation results: %d" % results_sum)
+
+
+if __name__=="__main__":
+  main()
