@@ -70,15 +70,17 @@ def _path(grid, start_pos, start_direction=UP):
 
     next_pos = _next_pos(pos, direction)
 
-    if not grid.is_in_bounds(next_pos):
-      # Going out of bounds
-      #print("Went out of bounds at position %s" % str(pos))
-      return path, False
-
     # Turn if facing obstacle
-    while grid[next_pos] == '#':
-      direction = _turn_right(direction) 
-      next_pos = _next_pos(pos, direction)
+    while True:
+      if not grid.is_in_bounds(next_pos):
+        # Going out of bounds
+        return path, False
+
+      if grid[next_pos] == '#':
+        direction = _turn_right(direction)
+        next_pos = _next_pos(pos, direction)
+      else:
+        break
 
     # Move forward
     pos = next_pos
@@ -86,7 +88,6 @@ def _path(grid, start_pos, start_direction=UP):
     directions_at_position = path_with_directions.get(pos)
     if directions_at_position is not None and direction in directions_at_position:
       # Looping path
-      #print("Path loop detected at position %s" % str(pos))
       return path, True
 
 
