@@ -1,0 +1,162 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/6
+
+
+UP    = (-1,  0)
+RIGHT = ( 0,  1)
+DOWN  = ( 1,  0)
+LEFT  = ( 0, -1)
+
+
+class Grid():
+  def __init__(self):
+    self._grid = []
+
+  def __getitem__(self, pos):
+    return self._grid[pos[0]][pos[1]]
+
+  def __setitem__(self, pos, value):
+    self._grid[pos[0]][pos[1]] = value
+
+  def clone(self):
+    clone = Grid()
+    for row in self._grid:
+      clone._grid.append(row[:])
+    return clone
+
+  def add_row(self, row):
+    # Convert to char array so we can modify single cells
+    self._grid.append(list(row))
+
+  def height(self):
+    return len(self._grid)
+
+  def width(self):
+    return len(self._grid[0])
+    
+  def is_in_bounds(self, pos):
+    return 0 <= pos[0] < self.height() and 0 <= pos[1] < self.width()
+
+
+def _read_input():
+  grid = Grid()
+  line_index = 0
+  guard_pos = None
+  with open("input.txt") as f:
+    for line in f:
+      line = line.rstrip()
+      grid.add_row(line)
+      
+      pos = line.find("^")
+      if pos >= 0:
+        guard_pos = (line_index, pos)
+
+      line_index += 1
+
+  if not guard_pos:
+    raise ValueError("Guard position not found!")
+
+  return grid, guard_pos
+
+
+def _path(grid, start_pos, start_direction=UP):
+  pos = start_pos
+  direction = start_direction
+  path = []
+  path_with_directions = dict() 
+  while True:
+    path.append(pos)
+    path_with_directions.setdefault(pos, set()).add(direction)
+
+    next_pos = _next_pos(pos, direction)
+
+    if not grid.is_in_bounds(next_pos):
+      # Going out of bounds
+      #print("Went out of bounds at position %s" % str(pos))
+      return path, False
+
+    # Turn if facing obstacle
+    while grid[next_pos] == '#':
+      direction = _turn_right(direction) 
+      next_pos = _next_pos(pos, direction)
+
+    # Move forward
+    pos = next_pos
+    
+    directions_at_position = path_with_directions.get(pos)
+    if directions_at_position is not None and direction in directions_at_position:
+      # Looping path
+      #print("Path loop detected at position %s" % str(pos))
+      return path, True
+
+
+def _visualize(grid, path_with_directions, outfile="visualize.txt"):
+  """
+  For debugging. Print the grid + path to file
+  """
+  def _direction_char(direction):
+    if direction == UP:
+      return "^"
+    elif direction == RIGHT:
+      return ">"
+    elif direction == DOWN:
+      return "v"
+    elif direction == LEFT:
+      return "<"
+
+  grid = grid.clone()
+  for pos, directions in path_with_directions.items():
+    if len(directions) > 1:
+      direction_char = "x"
+    else:
+      direction_char = _direction_char(list(directions)[0])
+    grid[pos] = direction_char
+
+  with open(outfile, "w") as f:
+    for row in range(grid.height()):
+      for col in range(grid.width()):
+        f.write(grid[(row, col)])
+      f.write("\n")
+
+  print("Wrote path visualization to %s." % outfile)
+
+
+def _next_pos(pos, direction):
+  return (pos[0] + direction[0], pos[1] + direction[1])
+
+
+def _turn_right(direction):
+  if direction == UP:
+    return RIGHT
+  elif direction == RIGHT:
+    return DOWN
+  elif direction == DOWN:
+    return LEFT
+  elif direction == LEFT:
+    return UP
+
+  
+def main():
+  # read input into a "2D array"
+  grid, guard_pos = _read_input()
+  path, _ = _path(grid, guard_pos)
+  distinct_positions = set(path)
+  print("Guard visited %d DISTINCT positions." % len(distinct_positions))
+
+  # Find all possible obstruction positions that would cause a looping path
+  obstruction_possibilities = 0
+  for pos in distinct_positions:
+    if grid[pos] != '.':
+      # already one here (or start position)
+      continue
+    grid[pos] = '#'
+    _, is_loop = _path(grid, guard_pos)
+    if is_loop:
+      obstruction_possibilities += 1
+    grid[pos] = '.'
+
+  print("There are %d possible obstruction positions that will cause a looping path." % obstruction_possibilities)
+      
+
+if __name__=="__main__":
+  main()
