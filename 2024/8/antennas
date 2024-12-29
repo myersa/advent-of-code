@@ -90,7 +90,6 @@ def main():
   antennae = _map_antennae(grid)
   antinodes = _locate_antinodes(antennae, len(grid), len(grid[0]))
   
-  # Part 1 answer: unique locations of antinodes?
   unique_antinode_locations = set()
   for locs in antinodes.values():
     for loc in locs:
