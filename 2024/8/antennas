@@ -1,0 +1,103 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/8
+
+import math
+
+PART2 = True
+
+
+def _read_input():
+  grid = []
+  with open("input.txt") as f:
+    for line in f:
+      line = line.rstrip()
+      grid.append(line)
+  return grid
+
+
+def _map_antennae(grid):
+  antennae = dict()
+  for i in range(len(grid)):
+    row = grid[i]
+    for j in range(len(row)):
+      char = row[j]
+      if char == ".":
+        # Nothing here
+        continue
+      antennae.setdefault(char, []).append((i,j))
+  return antennae
+
+
+def _distance(location1, location2):
+  return (location2[0] - location1[0], location2[1] - location1[1])
+
+
+def _add_distance(location, distance):
+  return (location[0] + distance[0], location[1] + distance[1])
+
+
+def _neg(distance):
+  return (-distance[0], -distance[1])
+
+
+def _is_in_bounds(location, height, width):
+  return 0 <= location[0] < height and 0 <= location[1] < width
+
+
+def _locate_antinodes(antennae, grid_height, grid_width):
+  antinodes = dict()
+  
+  def _antinodes_for_antennae_pair1(location1, location2):
+    distance = _distance(location1, location2)
+    for anti_loc in [_add_distance(location1, _neg(distance)), _add_distance(location2, distance)]:
+      if _is_in_bounds(anti_loc, grid_height, grid_width):
+        yield anti_loc
+
+  def _antinodes_for_antennae_pair2(location1, location2):
+    distance = _distance(location1, location2)
+    # In part2, ALL locations in line with the 2 antennae are antinodes, including between
+    # In this context, we want "angle" not actual distance. Reduce by Greatest Common Factor
+    gcd = math.gcd(distance[0], distance[1])
+    if gcd != 1:
+      distance = (distance[0] / gcd, distance[1] / gcd)
+    # Iterate both ways till we go out of bounds
+    yield location1
+    for d in [distance, _neg(distance)]:
+      anti_loc = location1
+      while True:
+        anti_loc = _add_distance(anti_loc, d)
+        if not _is_in_bounds(anti_loc, grid_height, grid_width):
+          break
+        yield anti_loc
+
+  antinodes_for_antennae_pair = _antinodes_for_antennae_pair2 if PART2 else _antinodes_for_antennae_pair1
+  for frequency, locations in antennae.items():
+    antinodes_for_frequency = []
+    antinodes[frequency] = antinodes_for_frequency
+    for i in range(len(locations)):
+      location1 = locations[i]
+      for j in range(i+1, len(locations)):
+        location2 = locations[j]
+        # There will be 2 antinodes for a pair of antennae of the same frequency
+        for anti_loc in antinodes_for_antennae_pair(location1, location2):
+          antinodes_for_frequency.append(anti_loc)
+
+  return antinodes
+
+
+def main():
+  grid = _read_input()
+  antennae = _map_antennae(grid)
+  antinodes = _locate_antinodes(antennae, len(grid), len(grid[0]))
+  
+  # Part 1 answer: unique locations of antinodes?
+  unique_antinode_locations = set()
+  for locs in antinodes.values():
+    for loc in locs:
+      unique_antinode_locations.add(loc)
+  print("Part %d:" % (2 if PART2 else 1))
+  print("There are antinodes within the map at %d unique locations." % len(unique_antinode_locations))
+
+
+if __name__=="__main__":
+  main()
