@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # https://adventofcode.com/2024/day/10
 
+PART2 = True
 
 class Trails():
   def read_input(self):
@@ -19,17 +20,25 @@ class Trails():
           yield (row, col)
 
   def trailhead_score(self, pos):
-    reachable_peaks = set()
-    def find_peaks(pos, next_alt):
+    paths = []
+    def find_paths(pos, alt, path):
+      path.append(pos)
+
+      if alt == 9:
+        paths.append(path)
+        return 
+
+      next_alt = alt + 1
       for other_pos in self.orthogonal_adjecents(pos):
         if self.alt_at(other_pos) == next_alt:
-          if next_alt == 9:
-            reachable_peaks.add(other_pos)
-          else:
-            find_peaks(other_pos, next_alt+1)
+          find_paths(other_pos, next_alt, path[:]) # pass path by copy
 
-    find_peaks(pos, 1)
-    return len(reachable_peaks)
+    find_paths(pos, 0, [])
+    if not PART2:
+      reachable_peaks = set([path[-1] for path in paths])
+      return len(reachable_peaks)
+    else:
+      return len(paths)
 
   def is_in_bounds(self, pos):
     return 0 <= pos[0] < self.height and 0 <= pos[1] < self.width
@@ -51,7 +60,9 @@ class Trails():
     scores_total = 0
     for pos in self.find_trailheads():
       scores_total += self.trailhead_score(pos)
+    print("Part %d" % (2 if PART2 else 1))
     print("Sum of trailhead scores: %d" % scores_total)
+
 
 if __name__=="__main__":
   Trails().run()
