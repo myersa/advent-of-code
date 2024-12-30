@@ -1,0 +1,57 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/10
+
+
+class Trails():
+  def read_input(self):
+    self.grid = []
+    with open("input.txt") as f:
+      for line in f:
+        self.grid.append([int(c) for c in line.rstrip()])
+    self.height = len(self.grid)
+    self.width = len(self.grid[0])
+
+  def find_trailheads(self):
+    for row in range(self.height):
+      for col in range(self.width):
+        alt = self.grid[row][col]
+        if alt == 0:
+          yield (row, col)
+
+  def trailhead_score(self, pos):
+    reachable_peaks = set()
+    def find_peaks(pos, next_alt):
+      for other_pos in self.orthogonal_adjecents(pos):
+        if self.alt_at(other_pos) == next_alt:
+          if next_alt == 9:
+            reachable_peaks.add(other_pos)
+          else:
+            find_peaks(other_pos, next_alt+1)
+
+    find_peaks(pos, 1)
+    return len(reachable_peaks)
+
+  def is_in_bounds(self, pos):
+    return 0 <= pos[0] < self.height and 0 <= pos[1] < self.width
+
+  def offset(self, pos, delta):
+    return (pos[0] + delta[0], pos[1] + delta[1])
+
+  def orthogonal_adjecents(self, pos):
+    for offset in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+      other_pos = self.offset(pos, offset)
+      if self.is_in_bounds(other_pos):
+        yield other_pos
+
+  def alt_at(self, pos):
+    return self.grid[pos[0]][pos[1]]
+
+  def run(self):
+    self.read_input()
+    scores_total = 0
+    for pos in self.find_trailheads():
+      scores_total += self.trailhead_score(pos)
+    print("Sum of trailhead scores: %d" % scores_total)
+
+if __name__=="__main__":
+  Trails().run()
