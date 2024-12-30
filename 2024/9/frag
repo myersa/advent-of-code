@@ -1,0 +1,159 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/9
+
+PART2 = True
+
+
+def read_input():
+  with open("input.txt") as f:
+    # Input is a single line
+    line = f.read()
+    line = line.rstrip()
+  return [int(c) for c in line]
+
+
+def expand_from_dense_format(dense):
+  # Dense format alternates between file size and free size (in "blocks")
+  # Expand to a full disk image as seen in the example.
+
+  image_size = sum(dense)
+  image = []
+  is_free_space = False  # alternating
+  file_id = 0
+  for block_size in dense:
+    value = None
+    if not is_free_space:
+      value = file_id
+      file_id += 1
+    image.extend([value for _ in range(block_size)])
+    is_free_space ^= True
+  return image
+
+
+def frag(image):
+  """
+  Fragment the image IN PLACE
+  """
+  # image is a huge list, so let's not reverse it every time we want to search from the right
+  def last_occupied_address(the_list, end):
+    """
+    Search a list for the LAST non-None value's position.
+    Suitable for very large lists, were calling 'reverse' repeatedly would be regrettable.
+    """
+    for i in range(end, -1, -1):
+      if the_list[i] is not None:
+        return i
+    raise ValueError("No occuppied addresses found!")
+
+  # Move blocks from the end, to first available free space
+  blocks_moved = 0
+  first_free = 0
+  last_occupied = len(image)-1
+  while True:
+    first_free = image.index(None, first_free)
+    last_occupied = last_occupied_address(image, last_occupied)
+    if last_occupied < first_free:
+      break
+    file_id = image[last_occupied]
+    image[first_free] = file_id
+    image[last_occupied] = None
+    blocks_moved += 1
+  print("Moved %d blocks." % blocks_moved)
+
+
+class IndexEntry():
+  def __init__(self, address, size):
+    self.address = address
+    self.size = size
+
+  def __repr__(self):
+    return (self.address, self.size).__repr__()
+
+
+def index_from_dense_format(dense):
+  files = []
+  free_spaces = []
+  is_free_space = False
+  address = 0
+  for i in range(len(dense)): 
+    block_size = dense[i]
+    if not is_free_space:
+      files.append(IndexEntry(address, block_size))
+    else:
+      free_spaces.append(IndexEntry(address, block_size))
+      
+    address += block_size
+    is_free_space ^= True
+
+  return files, free_spaces
+
+
+def frag2(files, free_spaces):
+  """
+  Part 2: move files to the left as a whole into free spaces that can hold them.
+  Updates files and free_spaces indeces IN PLACE
+  """
+  files_moved = 0
+
+  def find_free_space(file):
+    for free_space in free_spaces:
+      if free_space.address >= file.address:
+        return None
+      if free_space.size >= file.size:
+        return free_space
+    return None
+
+  # Go through files backwards until we can't move any anymore
+  for file_id in range(len(files)-1, -1, -1):
+    file = files[file_id]
+    free_space = find_free_space(file)
+    if free_space == None:
+      # This file can't move
+      continue
+
+    # Move the file!
+    file.address = free_space.address
+    free_space.address += file.size
+    free_space.size -= file.size  # May end up as 0; that's OK
+
+    files_moved += 1
+
+  print("Moved %d files." % files_moved)
+
+
+def expand_from_file_index(files, image_size):
+  image = [None for _ in range(image_size)]
+  for file_id in range(len(files)):
+    file = files[file_id]
+    for i in range(file.size):
+      image[file.address+i] = file_id
+  return image
+
+
+def calc_checksum(image):
+  checksum = 0
+  for address in range(len(image)):
+    file_id = image[address]
+    if file_id is None:
+      continue
+    checksum += file_id * address
+  return checksum
+
+
+def main():
+  dense = read_input()
+
+  if not PART2:
+    image = expand_from_dense_format(dense)
+    frag(image)
+  else:
+    files, free_spaces = index_from_dense_format(dense)
+    frag2(files, free_spaces)
+    image = expand_from_file_index(files, sum(dense))
+
+  checksum = calc_checksum(image)
+  print("Image checksum: %d" % checksum)
+
+
+if __name__=="__main__":
+  main()
