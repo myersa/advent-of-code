@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/11
+
+# The catch with this problem is the list of pebbles gets very, very large. Trying to do it all in memory
+# will use up all available RAM.
+# Use files instead.
+
+PEBBLES_FILE = "pebbles.txt"
+PEBBLES_PREV_FILE = "pebbles.prev.txt"
+
+import os
+import time
+
+
+def read_input():
+  with open("input.txt") as f:
+    line = f.read().rstrip()
+  pebbles = [int(_) for _ in line.split(" ")]
+  with open(PEBBLES_FILE, "w") as f:
+    for pebble in line.split(" "):
+      f.write(pebble)
+      f.write(os.linesep)
+
+
+def blink_pebble(pebble):
+  if pebble == 0:
+    return [1]
+
+  str_pebble = str(pebble)
+  digits = len(str_pebble)
+  if digits % 2 == 0:
+    return [
+        int(str_pebble[:int(digits/2)]),
+        int(str_pebble[int(digits/2):])
+    ]
+
+  return [2024 * pebble]
+
+
+def blink():
+  pebble_count = 0
+  os.rename(PEBBLES_FILE, PEBBLES_PREV_FILE)
+  with open(PEBBLES_PREV_FILE) as f_in:
+    with open(PEBBLES_FILE, "w") as f_out:
+      for line in f_in:
+        pebble = int(line.rstrip())
+        for pebble_out in blink_pebble(pebble):
+          f_out.write(str(pebble_out))
+          f_out.write(os.linesep)
+          pebble_count += 1
+  return pebble_count
+
+
+def do_blinks(blinks):
+  # Can take awhile so let's print periodic messages to the user
+  start_time = time.time()
+  prev_time = start_time
+
+  pebble_count = None
+  for i in range(blinks):
+    pebble_count = blink()
+    curr_time = time.time()
+    if curr_time - prev_time >= 5.0:
+      print("(in progress) blinked %d of %d times in %.1fs. %d pebbles so far." 
+          % (i, blinks, curr_time - start_time, pebble_count))
+      prev_time = curr_time
+
+  print("Blinked %d times; there are now %d pebbles." % (blinks, pebble_count))
+
+
+def main():
+  # Saves to line-wise file which will be read later
+  read_input()
+
+  # Blink 25x
+  do_blinks(25)
+
+  # Part 2: blink 50x more (75 total)
+  do_blinks(50)
+
+
+if __name__=="__main__":
+  main()
