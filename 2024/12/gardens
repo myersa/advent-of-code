@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/12
+
+
+class Gardens():
+  def read_input(self):
+    self.grid = []
+    with open("input.txt") as f:
+      for line in f:
+        self.grid.append(list(line.rstrip()))
+    self.height = len(self.grid)
+    self.width = len(self.grid[0])
+
+  def is_in_bounds(self, pos):
+    return 0 <= pos[0] < self.height and 0 <= pos[1] < self.width
+
+  def pos_offset(self, pos, offset):
+    return (pos[0] + offset[0], pos[1] + offset[1])
+
+  def orthogonal_adjecents(self, pos):
+    """
+    Yields all 4 adjecent positions to 'pos', INCLUDING out of bounds ones
+    """
+    for offset in [(0,1), (0,-1), (1,0), (-1,0)]:
+      yield self.pos_offset(pos, offset)
+
+  def plant_type_at(self, pos):
+    return self.grid[pos[0]][pos[1]]
+
+  def map_region(self, pos, plant_type):
+    positions = set()
+    boundary = set()
+
+    def _map_region(pos):
+      positions.add(pos)
+      for other_pos in self.orthogonal_adjecents(pos):
+        if other_pos in positions:
+          # Already seen this position
+          continue
+        if not self.is_in_bounds(other_pos) or self.plant_type_at(other_pos) != plant_type:
+          # Different region, or out of bounds. 
+          boundary.add(pos)
+          continue
+        _map_region(other_pos)
+
+    _map_region(pos)
+    return positions, boundary
+
+  def calculate_perimeter(self, boundary, plant_type):
+    perimeter = 0
+    for pos in boundary:
+      for other_pos in self.orthogonal_adjecents(pos):
+        if not self.is_in_bounds(other_pos) or self.plant_type_at(other_pos) != plant_type:
+          perimeter += 1
+
+    return perimeter
+          
+
+  def map_regions(self):
+    seen = set()
+
+    cost = 0
+    regions = 0
+    for row in range(self.height):
+      for col in range(self.width):
+        pos = (row, col)
+        if pos in seen:
+          continue
+
+        plant_type = self.plant_type_at(pos)
+        positions, boundary = self.map_region(pos, plant_type)
+        perimeter = self.calculate_perimeter(boundary, plant_type)
+
+        cost += perimeter * len(positions)
+        regions += 1
+
+        for p in positions: seen.add(p)
+    
+    print("There are %d regions; total fence cost is %d." % (regions, cost))
+
+
+  def run(self):
+    self.read_input()
+    self.map_regions()
+
+
+if __name__=="__main__":
+  Gardens().run()
