@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 # https://adventofcode.com/2024/day/12
 
+PART2 = True
+
+RIGHT = ( 0, 1)
+LEFT  = ( 0,-1)
+DOWN  = ( 1, 0)
+UP    = (-1, 0)
+ORTHOGONAL_OFFSETS = [RIGHT, DOWN, LEFT, UP]
 
 class Gardens():
   def read_input(self):
@@ -17,13 +24,6 @@ class Gardens():
   def pos_offset(self, pos, offset):
     return (pos[0] + offset[0], pos[1] + offset[1])
 
-  def orthogonal_adjecents(self, pos):
-    """
-    Yields all 4 adjecent positions to 'pos', INCLUDING out of bounds ones
-    """
-    for offset in [(0,1), (0,-1), (1,0), (-1,0)]:
-      yield self.pos_offset(pos, offset)
-
   def plant_type_at(self, pos):
     return self.grid[pos[0]][pos[1]]
 
@@ -33,7 +33,8 @@ class Gardens():
 
     def _map_region(pos):
       positions.add(pos)
-      for other_pos in self.orthogonal_adjecents(pos):
+      for offset in ORTHOGONAL_OFFSETS:
+        other_pos = self.pos_offset(pos, offset)
         if other_pos in positions:
           # Already seen this position
           continue
@@ -46,21 +47,47 @@ class Gardens():
     _map_region(pos)
     return positions, boundary
 
-  def calculate_perimeter(self, boundary, plant_type):
-    perimeter = 0
+  def fences(self, boundary, plant_type):
+    fences = []
     for pos in boundary:
-      for other_pos in self.orthogonal_adjecents(pos):
+      for offset in ORTHOGONAL_OFFSETS:
+        other_pos = self.pos_offset(pos, offset)
         if not self.is_in_bounds(other_pos) or self.plant_type_at(other_pos) != plant_type:
-          perimeter += 1
+          fences.append((pos, offset))
 
-    return perimeter
+    return fences
           
+  def fence_sections_discount(self, fences):
+    by_orientation = dict()
+    for pos, offset in fences:
+      major_coord, minor_coord = (pos[0], pos[1]) if offset in {UP, DOWN} else (pos[1], pos[0])
+      by_orientation.setdefault(offset, dict()).setdefault(major_coord, []).append(int(minor_coord))
 
-  def map_regions(self):
+    discount = 0
+    for inner in by_orientation.values():
+      for positions in inner.values():
+        positions.sort()
+        
+        # for N consecutive positions, we get a N-1 discount
+        last_pos = positions[0]
+        for i in range(1, len(positions)):
+          pos = positions[i]
+          if pos - last_pos == 1:
+            discount += 1
+          last_pos = pos
+
+    return discount
+
+  def run(self):
+    self.read_input()
+
     seen = set()
 
-    cost = 0
+    if PART2:
+      print("Part 2: applying discount for straight sections")
+
     regions = 0
+    cost = 0
     for row in range(self.height):
       for col in range(self.width):
         pos = (row, col)
@@ -69,19 +96,18 @@ class Gardens():
 
         plant_type = self.plant_type_at(pos)
         positions, boundary = self.map_region(pos, plant_type)
-        perimeter = self.calculate_perimeter(boundary, plant_type)
+        fences = self.fences(boundary, plant_type)
+        perimeter = len(fences)
+
+        if PART2:
+          perimeter -= self.fence_sections_discount(fences)
 
         cost += perimeter * len(positions)
         regions += 1
 
-        for p in positions: seen.add(p)
+        seen.update(positions)
     
     print("There are %d regions; total fence cost is %d." % (regions, cost))
-
-
-  def run(self):
-    self.read_input()
-    self.map_regions()
 
 
 if __name__=="__main__":
