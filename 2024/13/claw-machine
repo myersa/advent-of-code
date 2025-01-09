@@ -1,0 +1,134 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/13
+
+from dataclasses import dataclass
+import re
+
+
+PART2 = True
+PART2_OFFSET = 10000000000000
+
+BUTTON_A_COST = 3
+BUTTON_B_COST = 1
+
+
+@dataclass()
+class Button():
+  x: int
+  y: int
+  cost: int
+
+
+@dataclass()
+class Position():
+  x: int
+  y: int
+
+
+@dataclass()
+class ClawMachine():
+  buttonA: Button
+  buttonB: Button
+  prize: Position
+
+
+def read_input():
+  def _match(pattern, line, line_number):
+    line = line.rstrip()
+    m = pattern.match(line) 
+    if m is None:
+      raise ValueError("Unexpected pattern on line %d: \"%s\"" % (line_number, line))
+    return {k: int(v) for k, v in m.groupdict().items()}
+    
+  line_number = 1
+  re_button = re.compile(r"Button [AB]: X\+(?P<x>\d+), Y\+(?P<y>\d+)")
+  re_prize = re.compile(r"Prize: X=(?P<x>\d+), Y=(?P<y>\d+)")
+  with open("input.txt") as f:
+    while True:
+      buttonA=Button(cost=BUTTON_A_COST, **_match(re_button, f.readline(), line_number))
+      buttonB=Button(cost=BUTTON_B_COST, **_match(re_button, f.readline(), line_number+1))
+      prize=Position(**_match(re_prize, f.readline(), line_number+2))
+      if PART2:
+        prize.x += PART2_OFFSET
+        prize.y += PART2_OFFSET
+      yield ClawMachine(buttonA=buttonA, buttonB=buttonB, prize=prize)
+
+      # Blank line, or EOF
+      line = f.readline()
+      if not line:
+        break
+      line_number += 4
+
+
+def solve_machine(c: ClawMachine):
+  """
+  This is a system of 2 linear equations.
+  EQ1: prize.x = N1*x1 + N2*x2
+  EQ2: prize.y = N1*y1 + N2*y2
+  Solve for N1 and N2. If they're not both integers, the machine is not solvable.
+
+  Isolate N2: 
+  y1*EQ1: y1*prize.x= N1*x1*y1 + N2*x2*y1
+  x1*EQ2: x1*prize.y= N1*x1*y1 + N2*x1*y2
+  difference: y1*prize.x - x1*prize.y = (x2*y1 - x1*y2)*N2
+   N2 = (y1*prize.x - x1*prize.y) / (x2*y1 - x1*y2) 
+
+  Isolate N1:
+  y2*EQ1: y2*prize.x = N1*x1*y2 + N2*x2*y2
+  x2*EQ2: x2*prize.y = N1*x2*y1 + N2*x2*y2
+  difference: y2*prize.x - x2*prize.y = (x1*y2 - x2*y1)*N1
+   N1 = (y2*prize.x - x2*prize.y) / (x1*y2 - x2*y1)
+
+  SPECIAL CASE: parallel (each button moves in the exact same direction).
+  Then y1/x1 = y2/x2 -> x2*y1 = x1*y2 -> N1 and N2 undefined (div. by 0)
+  In this case, will only press one button.
+  prize.x = N1*x1   OR  N2*x2 and same for y
+  N1 = prize.x/x1, N2 = prize.x/x2
+  N1 = prize.y/y1, N2 = prize.y/y2
+  If both N1s are same and N2s are same, and integers, take the one representing the lower cost.
+  """
+  def solve_equations(x1, y1, x2, y2, prize):
+    N1 = (y2*prize.x - x2*prize.y) / (x1*y2 - x2*y1)
+    N2 = (y1*prize.x - x1*prize.y) / (x2*y1 - x1*y2) 
+    return N1, N2
+
+  def is_positive_int(x):
+    return x >= 0 and int(x) == x
+
+  if c.buttonA.y * c.buttonB.x == c.buttonA.x * c.buttonB.y: 
+    # Parallel
+    N1 = c.prize.x / c.buttonA.x 
+    N2 = c.prize.x / c.buttonB.x
+
+    if not is_positive_int(N1) or not is_positive_int(N2):
+      # Requires fractional or negative move
+      return None
+    if N1 * c.buttonA.y != c.prize.y or N2 * c.buttonB.y != c.prize.y:
+      # Parallel, but not parallel to path to prize 
+      return None
+    return min(N1 * buttonA.cost, N2 * buttonB.cost)
+  else:
+    # Not parallel
+    N1, N2 = solve_equations(c.buttonA.x, c.buttonA.y, c.buttonB.x, c.buttonB.y, c.prize)
+    if not is_positive_int(N1) or not is_positive_int(N2):
+      # Requires fractional or negative move
+      return None
+    return N1 * c.buttonA.cost + N2 * c.buttonB.cost
+
+
+def main():
+  total_cost = 0
+  wins = 0
+  machines = 0
+  for claw_machine in read_input():
+    machines += 1
+    cost = solve_machine(claw_machine)
+    if cost is not None:
+      total_cost += cost
+      wins += 1
+  print("Analyzed %d machines." % machines)
+  print("Can win %d of them with total cost %d" % (wins, total_cost))
+
+
+if __name__=="__main__":
+  main()
