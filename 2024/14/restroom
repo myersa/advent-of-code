@@ -1,0 +1,99 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/14
+
+from dataclasses import dataclass
+import re
+
+WIDTH = 101
+HEIGHT = 103
+STEPS = 100
+
+
+@dataclass()
+class Position():
+  x: int
+  y: int
+
+@dataclass()
+class Velocity():
+  x: int
+  y: int
+
+
+@dataclass()
+class Robot():
+  position: Position
+  velocity: Velocity
+
+  def move(self):
+    self.position.x += self.velocity.x
+    self.position.y += self.velocity.y
+    self._teleport()
+
+  def _teleport(self):
+    """
+    If we're out of bounds, wrap to other side
+    """
+    if self.position.x < 0:
+      self.position.x += WIDTH
+    elif self.position.x >= WIDTH:
+      self.position.x -= WIDTH
+
+    if self.position.y < 0:
+      self.position.y += HEIGHT
+    elif self.position.y >= HEIGHT:
+      self.position.y -= HEIGHT
+
+
+def read_input():
+  re_robot = re.compile(r"p=(\d+),(\d+) v=(-?\d+),(-?\d+)")
+  robots = []
+  with open("input.txt") as f:
+    for line in f:
+      line = line.rstrip()
+      m = re_robot.match(line)
+      position = Position(int(m.group(1)), int(m.group(2)))
+      velocity = Velocity(int(m.group(3)), int(m.group(4)))
+      robots.append(Robot(position, velocity))
+  return robots
+
+
+def safety_factor(robots):
+  mid_x = int(WIDTH / 2)
+  mid_y = int(HEIGHT / 2)
+
+  def _quadrant_id(pos: Position):
+    if pos.x == mid_x or pos.y == mid_y:
+      return None
+
+    quadrant_id = 0
+    if pos.x > mid_x:
+      quadrant_id += 1
+
+    if pos.y > mid_y:
+      quadrant_id += 2
+
+    return quadrant_id
+
+  quadrants = [0, 0, 0, 0]
+  for robot in robots:
+    quadrant = _quadrant_id(robot.position)
+    if quadrant is not None:
+      quadrants[quadrant] += 1
+
+  result = 1
+  for quadrant in quadrants:
+    result *= quadrant
+  return result
+
+
+def main():
+  robots = read_input()
+  for _ in range(STEPS):
+    for robot in robots:
+      robot.move()
+  print("Moved %d steps. Safety factor is %d." % (STEPS, safety_factor(robots)))
+
+
+if __name__=="__main__":
+  main()
