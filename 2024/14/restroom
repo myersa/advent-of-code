@@ -18,6 +18,7 @@ class Position():
   x: int
   y: int
 
+
 @dataclass()
 class Velocity():
   x: int
@@ -32,21 +33,8 @@ class Robot():
   def move(self):
     self.position.x += self.velocity.x
     self.position.y += self.velocity.y
-    self._teleport()
-
-  def _teleport(self):
-    """
-    If we're out of bounds, wrap to other side
-    """
-    if self.position.x < 0:
-      self.position.x += WIDTH
-    elif self.position.x >= WIDTH:
-      self.position.x -= WIDTH
-
-    if self.position.y < 0:
-      self.position.y += HEIGHT
-    elif self.position.y >= HEIGHT:
-      self.position.y -= HEIGHT
+    self.position.x %= WIDTH
+    self.position.y %= HEIGHT
 
 
 def read_input():
@@ -60,6 +48,11 @@ def read_input():
       velocity = Velocity(int(m.group(3)), int(m.group(4)))
       robots.append(Robot(position, velocity))
   return robots
+
+
+def move(robots):
+  for robot in robots:
+    robot.move()
 
 
 def move(robots):
@@ -107,13 +100,16 @@ def visualize(robots):
 
 
 def recognize_xmax_tree(robots):
-  central_xs = 0
-  low_ys = 0
-
+  """
+  In the end the XMAS tree image is much smaller than the grid, so this heuristic is for shit :P
+  But I got lucky and it found me the right step anyway. My tree was in the middle third.
+  """
   left = WIDTH / 3
   right = left * 2
-  
   top = HEIGHT / 2
+
+  central_xs = 0
+  low_ys = 0
 
   for robot in robots:
     if robot.position.x >= left and robot.position.x <= right:
