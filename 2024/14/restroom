@@ -2,7 +2,11 @@
 # https://adventofcode.com/2024/day/14
 
 from dataclasses import dataclass
+import math
+import statistics
 import re
+
+PART2 = True
 
 WIDTH = 101
 HEIGHT = 103
@@ -58,6 +62,11 @@ def read_input():
   return robots
 
 
+def move(robots):
+  for robot in robots:
+    robot.move()
+
+
 def safety_factor(robots):
   mid_x = int(WIDTH / 2)
   mid_y = int(HEIGHT / 2)
@@ -87,12 +96,54 @@ def safety_factor(robots):
   return result
 
 
+def visualize(robots):
+  grid = [[0 for _ in range(WIDTH)] for __ in range(HEIGHT)]
+  for robot in robots:
+    grid[robot.position.y][robot.position.x] += 1 
+  for line in grid:
+    for cell in line:
+      print(cell if cell else ".", end="")
+    print()
+
+
+def recognize_xmax_tree(robots):
+  central_xs = 0
+  low_ys = 0
+
+  left = WIDTH / 3
+  right = left * 2
+  
+  top = HEIGHT / 2
+
+  for robot in robots:
+    if robot.position.x >= left and robot.position.x <= right:
+      central_xs += 1
+    if robot.position.y <= top:
+      low_ys += 1
+
+  central_xs /= len(robots)
+  low_ys /= len(robots)
+
+  return statistics.mean([central_xs, low_ys])
+
+
 def main():
   robots = read_input()
-  for _ in range(STEPS):
-    for robot in robots:
-      robot.move()
-  print("Moved %d steps. Safety factor is %d." % (STEPS, safety_factor(robots)))
+  if not PART2:
+    for _ in range(STEPS):
+      move(robots)
+    print("Moved %d steps. Safety factor is %d." % (STEPS, safety_factor(robots)))
+  else:
+    steps = 0
+    while True:
+      move(robots)
+      steps += 1
+      confidence_score = recognize_xmax_tree(robots)
+      if confidence_score >= 0.7:
+        visualize(robots)
+        print("Step %d" % steps)
+        print("XMax tree confidence score: %.2f" % confidence_score)
+        input("Press Enter/Return to continue, or CTRL+C to terminate.")
 
 
 if __name__=="__main__":
