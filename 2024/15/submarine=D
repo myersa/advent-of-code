@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/15
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Offset():
+  x: int
+  y: int
+
+
+@dataclass(frozen=True)
+class Position():
+  x: int
+  y: int
+
+  def offset(self, offset: Offset):
+    return Position(self.x + offset.x, self.y + offset.y)
+
+
+class Grid():
+  def __init__(self, grid: list=None):
+    if grid is None:
+      grid = []
+    self.grid = grid
+
+  def __getitem__(self, position: Position):
+    return self.grid[position.y][position.x]
+
+  def __setitem__(self, position: Position, value: str):
+    self.grid[position.y][position.x] = value
+
+
+UP    = Offset( 0, -1)
+RIGHT = Offset( 1,  0)
+DOWN  = Offset( 0,  1)
+LEFT  = Offset(-1,  0)
+DIRECTION_CHARS = {'^': UP, '>': RIGHT, 'v': DOWN, '<': LEFT}
+
+ROBOT = "@"
+WALL = "#"
+BOX = "O"
+EMPTY = "."
+
+
+def read_input():
+  grid = []
+  moves = ""
+  row_id = 0
+  robot_pos = None
+  with open("input.txt") as f:
+    for line in f:
+      line = line.rstrip()
+      if not line:
+        # next section
+        break
+      grid.append(list(line))
+      col_id = line.find(ROBOT)
+      if col_id >= 0:
+        robot_pos = Position(col_id, row_id)
+      row_id += 1
+    for line in f:
+      line = line.rstrip()
+      moves += line
+  if robot_pos is None:
+    raise ValueError("No robot found in grid")
+  return Grid(grid), moves, robot_pos
+
+
+def visualize(grid):
+  for row in grid.grid:
+    for c in row:
+      print(c, end="")
+    print()
+
+
+def move_robot(robot_pos, grid, move):
+  def _move_robot():
+    direction = DIRECTION_CHARS.get(move) 
+    if direction is None:
+      raise ValueError("No direction associated with character '%s'" % move)
+    next_pos = robot_pos.offset(direction)
+    at_pos = grid[next_pos]
+    if at_pos == EMPTY:
+      # Unobstructed
+      return next_pos
+    if at_pos == WALL:
+      # Wall
+      return robot_pos
+    if at_pos == BOX:
+      # Box
+      beyond_prev_box = next_pos
+      boxes = []
+      while True:
+        boxes.append(beyond_prev_box)
+        beyond_prev_box = beyond_prev_box.offset(direction)
+        at_pos = grid[beyond_prev_box]
+        if at_pos == WALL:
+          # No move (boxes are up against a wall)
+          return robot_pos
+        elif at_pos == EMPTY:
+          # Move all boxes. Shortcut: just move first box to the empty space after the last one
+          grid[boxes[0]] = EMPTY
+          grid[beyond_prev_box] = BOX
+          return boxes[0]
+
+  new_robot_pos = _move_robot()
+  if new_robot_pos != robot_pos:
+    # Only really needed for "visualize()"
+    grid[robot_pos] = EMPTY
+    grid[new_robot_pos] = ROBOT
+
+  return new_robot_pos
+
+
+def sum_box_coords(grid):
+  coords_sum = 0
+  for y in range(len(grid.grid)):
+    for x in range(len(grid.grid[0])):
+      if grid.grid[y][x] == BOX:
+        coords_sum += 100*y + x
+  return coords_sum 
+      
+
+def main():
+  grid, moves, robot_pos = read_input()
+
+  for move in moves:
+    robot_pos = move_robot(robot_pos, grid, move)
+
+  coords_sum = sum_box_coords(grid)
+  print("After all moves, the sum of box coordinates is %d" % coords_sum)
+
+
+if __name__=="__main__":
+  main()
