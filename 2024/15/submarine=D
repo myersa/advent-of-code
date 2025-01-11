@@ -2,7 +2,9 @@
 # https://adventofcode.com/2024/day/15
 
 from dataclasses import dataclass
+import queue
 
+PART2 = True
 
 @dataclass(frozen=True)
 class Offset():
@@ -38,18 +40,41 @@ DOWN  = Offset( 0,  1)
 LEFT  = Offset(-1,  0)
 DIRECTION_CHARS = {'^': UP, '>': RIGHT, 'v': DOWN, '<': LEFT}
 
+EMPTY = "."
 ROBOT = "@"
 WALL = "#"
 BOX = "O"
-EMPTY = "."
+BOX_LEFT = "["
+BOX_RIGHT = "]"
 
 
 def read_input():
+  def _expand_grid(grid):
+    expanded_grid = []
+    for row in grid:
+      expanded_row = []
+      for item in row:
+        new_items = None
+        if item == EMPTY:
+          new_items = (EMPTY, EMPTY)
+        elif item == ROBOT:
+          new_items = (ROBOT, EMPTY)
+        elif item == WALL:
+          new_items = (WALL, WALL)
+        elif item == BOX:
+          new_items = (BOX_LEFT, BOX_RIGHT)
+        else:
+          raise ValueError("Unexpected item in grid: \"%s\"" % item)
+        expanded_row.extend(new_items)
+      expanded_grid.append(expanded_row)
+    return expanded_grid
+
   grid = []
   moves = ""
   row_id = 0
   robot_pos = None
   with open("input.txt") as f:
+    # Grid section
     for line in f:
       line = line.rstrip()
       if not line:
@@ -58,24 +83,89 @@ def read_input():
       grid.append(list(line))
       col_id = line.find(ROBOT)
       if col_id >= 0:
+        if PART2:
+          col_id *= 2
         robot_pos = Position(col_id, row_id)
       row_id += 1
+    if robot_pos is None:
+      raise ValueError("No robot found in grid")
+    if PART2:
+      grid = _expand_grid(grid)
+    # Moves section
     for line in f:
       line = line.rstrip()
       moves += line
-  if robot_pos is None:
-    raise ValueError("No robot found in grid")
+
   return Grid(grid), moves, robot_pos
 
 
 def visualize(grid):
+  y = 0
   for row in grid.grid:
+    print("%02d: " % y, end="") 
     for c in row:
       print(c, end="")
+    y += 1
     print()
 
 
 def move_robot(robot_pos, grid, move):
+  def _detect_boxes(position, direction):
+    # Ignore BOX_RIGHT. Positions will be of BOX_LEFT only
+    # Do BFS (no recursion) so that the box_positions can be safely moved in reverse order.
+    
+    if grid[position] == BOX_RIGHT:
+      position = position.offset(LEFT)
+
+    box_positions = []
+    positions_to_check = queue.Queue()
+    positions_to_check.put(position)
+    while not positions_to_check.empty():
+      position = positions_to_check.get()
+
+      at_pos = grid[position]
+      if at_pos not in {BOX, BOX_LEFT}:
+        continue
+
+      box_positions.append(position)
+
+      next_position = position.offset(direction)
+      if not PART2:
+        positions_to_check.put(next_position)
+      else:
+        if direction in {UP, DOWN}:
+          positions_to_check.put(next_position)
+          positions_to_check.put(next_position.offset(LEFT))
+          positions_to_check.put(next_position.offset(RIGHT))
+        else:
+          positions_to_check.put(next_position.offset(direction)) # check 2 steps over for horizontal
+
+    return box_positions
+
+  def _can_move(boxes, direction):
+    # All good as long as no walls are adjecent in the specified direction
+    positions_to_check = []
+    for box in boxes:
+      next_position = box.offset(direction)
+
+      if not PART2:
+        positions_to_check.append(next_position)
+      else:
+        if direction in {UP, DOWN}:
+          positions_to_check.extend([
+              next_position,
+              next_position.offset(RIGHT)
+          ])
+        elif direction == RIGHT:
+          positions_to_check.append(next_position.offset(RIGHT))
+        else:
+          positions_to_check.append(next_position)
+
+    for position in positions_to_check:
+      if grid[position] == WALL:
+        return False
+    return True
+
   def _move_robot():
     direction = DIRECTION_CHARS.get(move) 
     if direction is None:
@@ -88,26 +178,27 @@ def move_robot(robot_pos, grid, move):
     if at_pos == WALL:
       # Wall
       return robot_pos
-    if at_pos == BOX:
-      # Box
-      beyond_prev_box = next_pos
-      boxes = []
-      while True:
-        boxes.append(beyond_prev_box)
-        beyond_prev_box = beyond_prev_box.offset(direction)
-        at_pos = grid[beyond_prev_box]
-        if at_pos == WALL:
-          # No move (boxes are up against a wall)
-          return robot_pos
-        elif at_pos == EMPTY:
-          # Move all boxes. Shortcut: just move first box to the empty space after the last one
-          grid[boxes[0]] = EMPTY
-          grid[beyond_prev_box] = BOX
-          return boxes[0]
+
+    # Box
+    box_positions = _detect_boxes(next_pos, direction)
+    if _can_move(box_positions, direction):
+      # Move all boxes.
+      for box_position in reversed(box_positions):
+        if not PART2:
+          grid[box_position] = EMPTY
+          grid[box_position.offset(direction)] = BOX 
+        else:
+          grid[box_position] = EMPTY
+          grid[box_position.offset(RIGHT)] = EMPTY
+          grid[box_position.offset(direction)] = BOX_LEFT
+          grid[box_position.offset(direction).offset(RIGHT)] = BOX_RIGHT
+      return next_pos
+    else:
+      # Can't move boxes
+      return robot_pos
 
   new_robot_pos = _move_robot()
   if new_robot_pos != robot_pos:
-    # Only really needed for "visualize()"
     grid[robot_pos] = EMPTY
     grid[new_robot_pos] = ROBOT
 
@@ -118,10 +209,10 @@ def sum_box_coords(grid):
   coords_sum = 0
   for y in range(len(grid.grid)):
     for x in range(len(grid.grid[0])):
-      if grid.grid[y][x] == BOX:
+      if grid.grid[y][x] in {BOX, BOX_LEFT}:
         coords_sum += 100*y + x
   return coords_sum 
-      
+
 
 def main():
   grid, moves, robot_pos = read_input()
@@ -130,6 +221,8 @@ def main():
     robot_pos = move_robot(robot_pos, grid, move)
 
   coords_sum = sum_box_coords(grid)
+
+  if PART2: print("Part 2.")
   print("After all moves, the sum of box coordinates is %d" % coords_sum)
 
 
