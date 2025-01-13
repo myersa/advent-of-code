@@ -1,0 +1,101 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/16
+
+from dataclasses import dataclass
+
+
+@dataclass(frozen=True)
+class Offset():
+  x: int
+  y: int
+
+
+@dataclass(frozen=True)
+class Position():
+  x: int
+  y: int
+
+  def offset(self, offset: Offset):
+    return Position(x=self.x + offset.x, y=self.y + offset.y)
+
+  def subtract(self, other) -> Offset:
+    return Offset(x=self.x - other.x, y=self.y - other.y)
+
+  def distance(self, other) -> int:
+    diff = self.subtract(other)
+    return abs(diff.x) + abs(diff.y)
+
+
+@dataclass(frozen=True)
+class Grid():
+  grid: list
+
+  def __getitem__(pos: Position):
+    return grid[pos.y][pos.x]
+
+
+WALL = "#"
+EMPTY = "."
+START = "S"
+END = "E"
+
+MOVE_COST = 1
+TURN_COST = 1000
+
+# up, right, down, left. 
+# A 90º turn means moving from one of these to the next one left or right (with wraparound)
+TURNS = [Offset(0, -1), Offset(1, 0), Offset(0, 1), Offset(-1, 0)]
+
+
+def _turn(orientation, turn_direction):
+  i = TURNS.index(orientation) 
+  i += turn_direction
+  i %= len(TURNS)
+  return TURNS[i]
+
+
+def turn_right(orientation):
+  return _turn(orientation, 1)
+
+
+def turn_left(orientation):
+  return _turn(orientation, -1)
+
+
+def visualize(grid: Grid):
+  y = 0
+  for row in grid.grid:
+    print("%03d: " % y, end="")
+    print(row)    
+    y += 1
+
+
+def read_input():
+  grid = []
+  start = None
+  end = None
+  with open("input.txt") as f:
+    y = 0
+    for line in f:
+      line = line.rstrip()
+      grid.append(line)
+      
+      # Find start and end
+      x = line.find(START)
+      if x > 0:
+        start = Position(x, y)
+      x = line.find(END)
+      if x > 0:
+        end = Position(x, y)
+      y += 1
+
+  return Grid(grid), start, end
+
+
+def main():
+  grid, start, end = read_input()
+  breakpoint()
+
+
+if __name__=="__main__":
+  main()
