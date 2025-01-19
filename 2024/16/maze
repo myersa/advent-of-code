@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 # https://adventofcode.com/2024/day/16
 
+from collections import defaultdict
 from dataclasses import dataclass
+from heapq import heappush, heappop
+import math
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class Offset():
   x: int
   y: int
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class Position():
   x: int
   y: int
@@ -26,12 +29,23 @@ class Position():
     return abs(diff.x) + abs(diff.y)
 
 
+@dataclass(frozen=True, order=True)
+class Orientation(Offset):
+  symbol: str 
+
+
+@dataclass(frozen=True, order=True)
+class State():
+  position: Position
+  orientation: Orientation
+
+
 @dataclass(frozen=True)
 class Grid():
   grid: list
 
-  def __getitem__(pos: Position):
-    return grid[pos.y][pos.x]
+  def __getitem__(self, pos: Position):
+    return self.grid[pos.y][pos.x]
 
 
 WALL = "#"
@@ -42,9 +56,13 @@ END = "E"
 MOVE_COST = 1
 TURN_COST = 1000
 
-# up, right, down, left. 
+EAST  = Orientation( 1,  0, ">")
+SOUTH = Orientation( 0,  1, "v")
+WEST  = Orientation(-1,  0, "<")
+NORTH = Orientation( 0, -1, "^")
+
 # A 90º turn means moving from one of these to the next one left or right (with wraparound)
-TURNS = [Offset(0, -1), Offset(1, 0), Offset(0, 1), Offset(-1, 0)]
+TURNS = [EAST, SOUTH, WEST, NORTH]
 
 
 def _turn(orientation, turn_direction):
@@ -62,11 +80,19 @@ def turn_left(orientation):
   return _turn(orientation, -1)
 
 
-def visualize(grid: Grid):
+def visualize(grid: Grid, states: list = None):
+  grid = grid.grid
+  if states is not None:
+    grid = [list(row) for row in grid]
+    for state in states:
+      grid[state.position.y][state.position.x] = state.orientation.symbol
+
   y = 0
-  for row in grid.grid:
+  for row in grid:
     print("%03d: " % y, end="")
-    print(row)    
+    for cell in row:
+      print(cell, end="")
+    print()
     y += 1
 
 
@@ -92,9 +118,89 @@ def read_input():
   return Grid(grid), start, end
 
 
+def A_Star(start, goal, h, neighbors_of):
+  """
+  Translated from pseudocode on https://en.wikipedia.org/wiki/A*_search_algorithm.
+  Some adjustments were made specifically for this problem.
+  """
+
+  came_from = {}
+  def reconstruct_path(current, cost):
+    path = []
+    while current != start:
+      path.append((current, cost))
+      current, cost = came_from[current]
+    path.reverse()
+    return path
+
+  g_score = defaultdict(lambda: math.inf)
+  g_score[start] = 0
+
+  f_score = defaultdict(lambda: math.inf)
+  f_score[start] = h(start)
+
+  open_set = []
+  def push(node, cost):
+    heappush(open_set, (f_score[node], node, cost))
+  def pop():
+    return heappop(open_set)
+  def is_pushed(node):
+    for _, other, _ in open_set:
+      if other == node:
+        return True
+    return False
+  push(start, None)
+
+  while open_set:
+    _, current, cost = pop()
+    if current == goal:
+      return reconstruct_path(current, cost)
+
+    for neighbor, cost in neighbors_of(current):
+      tentative_g_score = g_score[current] + cost
+      if tentative_g_score < g_score[neighbor]:
+        came_from[neighbor] = (current, cost)
+        g_score[neighbor] = tentative_g_score
+        f_score[neighbor] = tentative_g_score + h(neighbor)
+        if not is_pushed(neighbor):
+          push(neighbor, cost)
+
+  # No path to goal
+  return None
+
+
+def solve_maze(grid: Grid, start_pos: Position, end_pos: Position):
+  def heuristic(state: State):
+    return end_pos.distance(state.position)
+
+  def neighbors_of(state: State):
+    # 90º turn (if not facing wall)
+    for turned_state in [
+        State(state.position, turn_left(state.orientation)),
+        State(state.position, turn_right(state.orientation))
+    ]:
+      if grid[turned_state.position.offset(turned_state.orientation)] != WALL:
+        yield turned_state, TURN_COST
+
+    # Forward step (if not blocked)
+    forward_pos = state.position.offset(state.orientation)
+    if grid[forward_pos] != WALL:
+      yield (State(forward_pos, state.orientation), MOVE_COST)
+
+  start = State(start_pos, EAST)
+  end = State(end_pos, NORTH)  # orientation at end should be ignored, but this works for my input regardless
+  return A_Star(start, end, heuristic, neighbors_of)
+
+
 def main():
   grid, start, end = read_input()
-  breakpoint()
+  path = solve_maze(grid, start, end)
+  if not path:
+    print("Failed to solve maze :(")
+  else:
+    visualize(grid, [p[0] for p in path])
+    cost = sum([p[1] for p in path])
+    print("Solved maze with cost %d" % cost)
 
 
 if __name__=="__main__":
