@@ -1,0 +1,127 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/18
+
+from collections import defaultdict
+from dataclasses import dataclass
+from heapq import heappush, heappop
+import math
+
+
+EMPTY = "."
+BYTE = "#"
+GRID_SIZE = 71
+
+
+@dataclass(frozen=True, order=True)
+class Position():
+  x: int
+  y: int
+
+@dataclass
+class Grid():
+  grid: list
+
+  def __getitem__(self, position: Position):
+    return self.grid[position.y][position.x]
+
+  def __setitem__(self, position: Position, value):
+    self.grid[position.y][position.x] = value
+
+  def __repr__(self):
+    strs = []
+    for row in self.grid:
+      strs.append("".join(row))
+    return "\n".join(strs)
+
+
+def read_input():
+  positions = []
+  with open("input.txt") as f:
+    for line in f:
+      line = line.rstrip()
+      x, y = [int(_) for _ in line.split(",")]
+      positions.append(Position(x, y))
+  return positions
+
+
+def A_Star(start, goal, h, neighbors_of):
+  """
+  Copied from 2024/16/maze
+  """
+
+  came_from = {}
+  def reconstruct_path(current, cost):
+    path = []
+    while current != start:
+      path.append((current, cost))
+      current, cost = came_from[current]
+    path.reverse()
+    return path
+
+  g_score = defaultdict(lambda: math.inf)
+  g_score[start] = 0
+
+  f_score = defaultdict(lambda: math.inf)
+  f_score[start] = h(start)
+
+  open_set = []
+  def push(node, cost):
+    heappush(open_set, (f_score[node], node, cost))
+  def pop():
+    return heappop(open_set)
+  def is_pushed(node):
+    for _, other, _ in open_set:
+      if other == node:
+        return True
+    return False
+  push(start, None)
+
+  while open_set:
+    _, current, cost = pop()
+    if current == goal:
+      return reconstruct_path(current, cost)
+
+    for neighbor, cost in neighbors_of(current):
+      tentative_g_score = g_score[current] + cost
+      if tentative_g_score < g_score[neighbor]:
+        came_from[neighbor] = (current, cost)
+        g_score[neighbor] = tentative_g_score
+        f_score[neighbor] = tentative_g_score + h(neighbor)
+        if not is_pushed(neighbor):
+          push(neighbor, cost)
+
+  # No path to goal
+  return None
+
+
+def solve_maze(grid):
+  end = Position(GRID_SIZE-1, GRID_SIZE-1)
+  def heuristic(position):
+    return abs(end.x - position.x) + abs(end.y - position.y)
+
+  def neighbors_of(position):
+    for offset in [(0,1), (1,0), (0,-1), (-1,0)]:
+      other_position = Position(position.x + offset[0], position.y + offset[1])
+      if 0 <= other_position.x < GRID_SIZE and 0 <= other_position.y < GRID_SIZE and grid[other_position] == EMPTY:
+        yield other_position, 1
+
+  start = Position(0, 0)
+  return A_Star(start, end, heuristic, neighbors_of)
+
+
+def main():
+  grid = Grid([[EMPTY for _ in range(GRID_SIZE)] for __ in range(GRID_SIZE)])
+  positions = read_input()
+  iterations = 1024
+  for i in range(iterations):
+     grid[positions[i]] = BYTE
+  print("Ran %d byte drops" % iterations)
+  path = solve_maze(grid)
+  if not path:
+    print("No path found :(")
+  else:
+    print("Path found, length = %d" % len(path))
+
+
+if __name__=="__main__":
+  main()
