@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/17
+
+from dataclasses import dataclass
+import math
+
+
+def read_input():
+  registers = []
+  program = None
+
+  with open("input.txt") as f:
+    for _ in range(3):
+      line = f.readline().rstrip()
+      registers.append(int(line.split(": ", 1)[1]))
+
+    # blank line
+    f.readline()
+
+    line = f.readline().rstrip()
+    program = [int(_) for _ in line.split(": ", 1)[1].split(",")]
+
+  return registers, program
+
+
+class Computer():
+  def __init__(self, registers: list):
+    self.A = registers[0]
+    self.B = registers[1]
+    self.C = registers[2]
+    self.PC = 0
+    self.output = []
+    self.instructions = {
+      0: self._adv,
+      1: self._bxl,
+      2: self._bst,
+      3: self._jnz,
+      4: self._bxc,
+      5: self._out,
+      6: self._bdv,
+      7: self._cdv
+    }
+
+  def _combo(self, operand):
+    if 0 <= operand <= 3:
+      return operand
+    elif operand == 4:
+      return self.A
+    elif operand == 5:
+      return self.B
+    elif operand == 6:
+      return self.C
+    else:
+      raise ValueError("Invalid _combo operand value %d" % operand)
+
+  def _dv(self, operand):
+    return int(self.A / math.pow(2, self._combo(operand)))
+
+  def _adv(self, operand):
+    # division
+    self.A = self._dv(operand)
+
+  def _bxl(self, operand):
+    # Bitwize XOR
+    self.B ^= operand
+
+  def _bst(self, operand):
+    # Mask to lowest 3 bits
+    self.B = self._combo(operand) % 8
+
+  def _jnz(self, operand):
+    # Jump
+    if self.A == 0:
+      return
+
+    self.PC = operand
+    return True
+
+  def _bxc(self, _):
+    # Bitwize XOR
+    self.B ^= self.C
+
+  def _out(self, operand):
+    # Output
+    self.output.append(self._combo(operand) % 8)
+
+  def _bdv(self, operand):
+    # division
+    self.B = self._dv(operand)
+
+  def _cdv(self, operand):
+    # division
+    self.C = self._dv(operand)
+    
+  def execute(self, program: list):
+    while True:
+      if self.PC >= len(program):
+        # halt
+        break
+      opcode, operand = program[self.PC:self.PC+2]
+      op = self.instructions[opcode]
+      jumped = op(operand)
+      if not jumped:
+        self.PC += 2
+
+    print("Program output:")
+    print(",".join([str(v) for v in self.output]))
+
+
+def main():
+  registers, program = read_input()
+  computer = Computer(registers)
+  computer.execute(program)
+
+
+if __name__=="__main__":
+  main()
