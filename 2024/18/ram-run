@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from heapq import heappush, heappop
 import math
 
+PART2 = True
 
 EMPTY = "."
 BYTE = "#"
@@ -119,8 +120,20 @@ def main():
   path = solve_maze(grid)
   if not path:
     print("No path found :(")
-  else:
-    print("Path found, length = %d" % len(path))
+    return
+
+  print("Path found, length = %d" % len(path))
+  if not PART2:
+    return
+
+  print("Finding first byte that makes solving impossible. This may take awhile...")
+  for i in range(iterations, len(positions)):
+    position = positions[i]
+    grid[position] = BYTE
+    path = solve_maze(grid)
+    if not path:
+      print("Maze is not solvable after adding %dth byte drop: %s" % (i+1, position))
+      break
 
 
 if __name__=="__main__":
