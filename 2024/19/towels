@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/19
+
+import re
+import signal
+import threading
+
+
+MATCH_TIMEOUT = 1
+
+
+def read_input():
+  towels = None
+  displays = []
+  with open("input.txt") as f:
+    # First line: towels
+    towels = f.readline().rstrip().split(", ")
+
+    # Blank line
+    f.readline()
+
+    # Remaining lines: display patterns
+    for line in f:
+      line = line.rstrip()
+      displays.append(line)
+
+  return towels, displays
+
+
+def towel_regex(towels):
+  # Use longest string first
+  sorted_towels = sorted(towels, key=len, reverse=False)
+  return re.compile("(" + "|".join(sorted_towels) + ")*")
+
+
+def match_with_timeout(towel_re, display, timeout):
+  class TimeoutExpired(Exception):
+      pass
+
+  def alarm_handler(signum, frame):
+      raise TimeoutExpired
+
+  signal.signal(signal.SIGALRM, alarm_handler)
+  signal.alarm(timeout)
+
+  try:
+      return towel_re.fullmatch(display)
+  except TimeoutExpired:
+      print("Timeout while attempting to match " + display)
+      return None
+  finally:
+      signal.alarm(0)  # Cancel the alarm
+
+    
+def main():
+  towels, displays = read_input()
+  towel_re = towel_regex(towels)
+
+  solved_count = 0
+  for display in displays:
+    solved = match_with_timeout(towel_re, display, MATCH_TIMEOUT)
+    if solved:
+      solved_count += 1
+
+  print("Of %d requested displays, %d are solvable with the available towels." % (len(displays), solved_count))
+
+
+if __name__=="__main__":
+  main()
