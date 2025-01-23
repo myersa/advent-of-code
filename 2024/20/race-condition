@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/20
+
+from dataclasses import dataclass
+
+PART2 = True
+CHEAT_SAVINGS_MINIMUM = 100
+CHEAT_DURATION = 2 if not PART2 else 20
+
+START = "S"
+END = "E"
+TRACK = "."
+WALL = "#"
+
+
+@dataclass(frozen=True)
+class Offset():
+  x: int
+  y: int
+
+  def length(self):
+    return abs(self.x) + abs(self.y)
+
+UP = Offset(0, -1)
+RIGHT = Offset(1, 0)
+DOWN = Offset(0, 1)
+LEFT = Offset(-1, 0)
+DIRECTIONS = (UP, RIGHT, DOWN, LEFT)
+
+@dataclass(frozen=True)
+class Position():
+  x: int
+  y: int
+
+  def offset(self, direction: Offset):
+    return Position(self.x + direction.x, self.y + direction.y)
+
+  def delta(self, other) -> Offset:
+    return Offset(other.x - self.x, other.y - self.y)
+
+@dataclass()
+class Grid():
+  grid: list
+
+  def clone(self):
+    return Grid([cell for cell in [row[:] for row in self.grid]])
+
+  def __getitem__(self, position: Position):
+    return self.grid[position.y][position.x]
+
+  def __setitem__(self, position: Position, value):
+    self.grid[position.y][position.x] = value
+
+  def __repr__(self):
+    result = ""
+    for row in self.grid:
+      for cell in row:
+        result += cell
+      result += "\n"
+    return result
+
+
+def read_input():
+  grid = []
+  start_pos = None
+  end_pos = None
+  y = 0
+  with open("input.txt") as f:
+    for line in f:
+      line = line.rstrip()
+      grid.append(list(line))
+
+      if start_pos is None:
+        x = line.find(START)
+        if x >= 0:
+          start_pos = Position(x, y)
+      if end_pos is None:
+        x = line.find(END)
+        if x >= 0:
+          end_pos = Position(x, y)
+
+      y += 1
+
+  if start_pos is None or end_pos is None:
+    raise ValueError("Failed to find start and/or end position")
+
+  return Grid(grid), start_pos, end_pos
+
+
+def trace_track(grid: Grid, start_pos: Position):
+  track = [start_pos]
+  position = start_pos
+  reverse_direction = None
+  while True:
+    for direction in DIRECTIONS:
+      if reverse_direction is not None and direction == reverse_direction:
+        continue
+      next_pos = position.offset(direction)
+      if grid[next_pos] != WALL:
+        reverse_direction = DIRECTIONS[(DIRECTIONS.index(direction) + 2) % 4]
+        position = next_pos
+        break  # found next position
+
+    track.append(position)
+    if grid[position] == END:
+      break  # found end
+
+  return track
+
+
+def find_cheats(grid: Grid, track: list):
+  # Super crude O(N^2) method: for each position on track, try each other (subsequent) position
+  cheats = []
+  for i in range(len(track)):
+    pos = track[i]
+    for j in range(len(track)-1, i+1, -1):
+      other_pos = track[j]
+      distance = pos.delta(other_pos).length()
+      if distance <= CHEAT_DURATION and j-i > distance:
+        # We would save j-1 but still have to traverse distance to use this cheat
+        cheats.append((j-i-distance, pos, other_pos))
+
+  return cheats
+
+
+def main():
+  grid, start_pos, end_pos = read_input()
+  track = trace_track(grid, start_pos)
+  print("Track length is %d" % len(track))
+  print("Finding cheats of up to length %d" % CHEAT_DURATION)
+  cheats = find_cheats(grid, track)
+  good_cheats = [cheat for cheat in cheats if cheat[0] >= CHEAT_SAVINGS_MINIMUM]
+  print("There are %d cheats that would save at least %d moves." % (len(good_cheats), CHEAT_SAVINGS_MINIMUM))
+
+
+if __name__=="__main__":
+  main()
