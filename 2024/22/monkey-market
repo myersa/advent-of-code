@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/22
+
+
+def read_input():
+  with open("input.txt") as f:
+    for line in f:
+      line = line.rstrip()
+      yield int(line)
+
+
+def mix(number, argument):
+  return number ^ argument
+
+
+def prune(number):
+  return number % 16777216
+
+
+def evolve(number):
+  number = prune(mix(number, number * 64))
+  number = prune(mix(number, int(number / 32)))
+  number = prune(mix(number, number * 2048))
+
+  return number
+
+
+
+def main():
+  total = 0
+  for number in read_input():
+    for _ in range(2000):
+      number = evolve(number)
+    total += number
+  print(total)
+
+
+if __name__=="__main__":
+  main()
