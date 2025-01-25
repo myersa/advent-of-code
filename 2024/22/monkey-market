@@ -25,14 +25,56 @@ def evolve(number):
   return number
 
 
-
 def main():
   total = 0
+  monkey_index = 0
+  all_sequences = []
+  distinct_sequences = set()
   for number in read_input():
+    # print("Monkey %d" % monkey_index)
+    # For each monkey track all sequences leading up to each possible price
+    sequences = {}
+    last_4 = []
+    prev_ones = None
     for _ in range(2000):
       number = evolve(number)
+      ones = number % 10
+      # print("%10d: %d" % (number, ones), end="")
+
+      if prev_ones is not None:
+        delta = ones - prev_ones
+        # print(" (%2d)" % delta, end="")
+        if len(last_4) == 4:
+          last_4.pop(0)
+        last_4.append(delta)
+        if len(last_4) == 4 and ones > 0:
+          sequence = tuple(last_4)
+          if sequence not in sequences:
+            sequences[sequence] = ones
+            distinct_sequences.add(sequence)
+
+      # print()
+      prev_ones = ones
+    all_sequences.append(sequences)
     total += number
-  print(total)
+    monkey_index += 1
+    # print()
+  print("Total of all numbers: %d" % total)
+
+  # Find ideal sequence to get max. # of bananas
+  print("Analyzing sequences...")
+  best_so_far = None
+  most_so_far = 0
+  for sequence in distinct_sequences:
+    bananas = 0
+    for sequences in all_sequences:
+      bananas += sequences.get(sequence, 0)
+
+    if bananas > most_so_far:
+      best_so_far = sequence
+      most_so_far = bananas
+
+  print("The ideal sequence is %s yielding %d total bananas." % (best_so_far, most_so_far))
 
 
 if __name__=="__main__":
