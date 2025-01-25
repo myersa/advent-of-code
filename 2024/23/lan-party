@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/23
+
+
+def read_input():
+  links = []
+  with open("input.txt") as f:
+    for line in f:
+      line = line.rstrip()
+      links.append(tuple(line.split("-", 1)))
+  return links
+
+
+def main():
+  links = read_input()
+  # Build a dict of computer : list(connected computer)
+  links_dict = {}
+  for node1, node2  in links: 
+    links_dict.setdefault(node1, []).append(node2)
+    links_dict.setdefault(node2, []).append(node1)
+
+  # For each node's linked nodes, find interconnections
+  # Note that order doesn't matter so sort by name before adding
+  triple_links = set()
+  for node, other_nodes in links_dict.items():
+    for i in range(len(other_nodes)):
+      other_node1 = other_nodes[i]
+      connected = links_dict.get(other_node1, set())
+      for j in range(i+1, len(other_nodes)):
+        other_node2 = other_nodes[j]
+        if other_node2 in connected:
+          triple_links.add(tuple(sorted((node, other_node1, other_node2))))
+
+  # Find triple links including any computers starting with 't'
+  count = 0
+  for nodes in triple_links:
+    for node in nodes:
+      if node.startswith('t'):
+        count+= 1
+        break
+  print("There are %d triple links that include nodenames starting with 't'." % count)
+
+
+if __name__=="__main__":
+  main()
