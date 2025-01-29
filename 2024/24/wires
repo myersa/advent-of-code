@@ -1,0 +1,88 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2024/day/24
+
+from dataclasses import dataclass
+from operator import and_, or_, xor
+import queue
+import re
+
+
+AND = "AND"
+OR = "OR"
+XOR = "XOR"
+OPS = {
+  AND: and_,
+  OR:  or_,
+  XOR: xor
+}
+
+
+@dataclass()
+class Gate():
+  wire1: str
+  op: str
+  wire2: str
+  wire_out: str
+
+def read_input():
+  with open("input.txt") as f:
+    # Section 1
+    init_states = {}
+    for line in f:
+      line = line.rstrip()
+      if not line:
+        break
+      wire, state = line.split(": ", 1)
+      init_states[wire] = int(state)
+
+    # Section 2
+    gates = []
+    re_gates = re.compile(r"(\w+) (" + "|".join([AND, OR, XOR]) + r") (\w+) -> (\w+)")
+    for line in f:
+      line = line.rstrip()
+      m = re_gates.fullmatch(line)
+      if not m:
+        raise ValueError("Failed to parse gate line:\n" + line)
+      gates.append(Gate(*m.groups()))
+
+  return init_states, gates
+
+
+def solve(init_states, gates):
+  # Resolve all states. Run ops where states are available first.
+  states = dict(init_states)
+  gates_queue = queue.Queue()
+  for gate in gates: gates_queue.put(gate) 
+  
+  while not gates_queue.empty():
+    gate = gates_queue.get()
+    if gate.wire1 not in states or gate.wire2 not in states:
+      # Save for later
+      gates_queue.put(gate)
+      continue
+
+    # Warn if conflicting outputs? But the input should be trustworthy I guess
+    states[gate.wire_out] = OPS[gate.op](states[gate.wire1], states[gate.wire2])
+
+  return states
+
+
+def compute_zs(states):
+  zs = []
+  for wire, state in states.items():
+    if not wire.startswith("z"):
+      continue
+    zs.append((wire, state))
+  zs.sort(reverse=True)
+  return "0b" + "".join([str(state) for _, state in zs])
+
+
+def main():
+  init_states, gates = read_input()
+  states = solve(init_states, gates)
+  answer = compute_zs(states)
+  print("%s (%d)" % (answer, int(answer, 2)))
+
+
+if __name__=="__main__":
+  main()
