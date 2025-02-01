@@ -1,0 +1,55 @@
+#!/usr/bin/env python3 
+# https://adventofcode.com/2024/day/25
+
+
+FULL = "#"
+EMPTY = "."
+
+
+def read_input():
+  locks, keys = [], []
+  def _append_grid(grid):
+    collection = locks if grid[0][0] == FULL else keys
+    collection.append(grid)
+
+  grid = []
+  with open("input.txt") as f:
+    for line in f:
+      line = line.rstrip()
+      if not line:
+        # End of current lock/key
+        _append_grid(grid)
+        grid = []
+        continue
+
+      grid.append(line)
+
+  # Last lock/key
+  _append_grid(grid)
+
+  return locks, keys
+
+
+def fits(lock, key):
+  for row in range(len(lock)):
+    for col in range(len(lock[0])):
+      if lock[row][col] == FULL and key[row][col] == FULL:
+        return False
+  return True
+
+
+def main():
+  locks, keys = read_input()
+  print(f"Found {len(locks)} locks and {len(keys)} keys.")
+
+  fit_count = 0
+  for lock in locks:
+    for key in keys:
+      if fits(lock, key):
+        fit_count += 1
+
+  print(f"{fit_count} combinations fit.")
+
+
+if __name__=="__main__":
+  main()
