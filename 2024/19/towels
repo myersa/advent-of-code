@@ -1,12 +1,7 @@
 #!/usr/bin/env python3
 # https://adventofcode.com/2024/day/19
 
-import re
-import signal
-import threading
-
-
-MATCH_TIMEOUT = 1
+from functools import lru_cache
 
 
 def read_input():
@@ -27,42 +22,37 @@ def read_input():
   return towels, displays
 
 
-def towel_regex(towels):
-  # Use longest string first
-  sorted_towels = sorted(towels, key=len, reverse=False)
-  return re.compile("(" + "|".join(sorted_towels) + ")*")
+def count_arrangements(towel_set, display):
+  """
+  Counts all possible ways to form `display` using `towels`.
+  Uses memoized recursion (DP).
+  """
+
+  @lru_cache(None)  # Memoization to avoid redundant calculations
+  def dp(i):
+    if i == len(display):
+      return 1  # Reached end, valid arrangement
+
+    ways = 0
+    # display[:len(display)] is the full str so in the range call, need to set 'end' to len(display)+1
+    for j in range(i + 1, len(display) + 1):
+      if display[i:j] in towel_set:  # Can we form display[i:j]?
+        ways += dp(j)  # Recurse on the remainder
+
+    return ways
+
+  return dp(0)
 
 
-def match_with_timeout(towel_re, display, timeout):
-  class TimeoutExpired(Exception):
-      pass
-
-  def alarm_handler(signum, frame):
-      raise TimeoutExpired
-
-  signal.signal(signal.SIGALRM, alarm_handler)
-  signal.alarm(timeout)
-
-  try:
-      return towel_re.fullmatch(display)
-  except TimeoutExpired:
-      print("Timeout while attempting to match " + display)
-      return None
-  finally:
-      signal.alarm(0)  # Cancel the alarm
-
-    
 def main():
   towels, displays = read_input()
-  towel_re = towel_regex(towels)
+  towel_set = set(towels)
 
-  solved_count = 0
+  total_count = 0
   for display in displays:
-    solved = match_with_timeout(towel_re, display, MATCH_TIMEOUT)
-    if solved:
-      solved_count += 1
+    total_count += count_arrangements(towel_set, display)
 
-  print("Of %d requested displays, %d are solvable with the available towels." % (len(displays), solved_count))
+  print("Total ways to form all requested displays:", total_count)
 
 
 if __name__=="__main__":
