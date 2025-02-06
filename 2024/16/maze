@@ -118,30 +118,19 @@ def read_input():
   return Grid(grid), start, end
 
 
-def A_Star(start, goal, h, neighbors_of):
+def Dijkstra(start, goal, neighbors_of):
   """
-  Translated from pseudocode on https://en.wikipedia.org/wiki/A*_search_algorithm.
-  Some adjustments were made specifically for this problem.
+  Modified from A* to Dijkstra's Algorithm.
+  Tracks all optimal paths instead of just one.
   """
 
-  came_from = {}
-  def reconstruct_path(current, cost):
-    path = []
-    while current != start:
-      path.append((current, cost))
-      current, cost = came_from[current]
-    path.reverse()
-    return path
-
+  predecessors = defaultdict(list)  # Tracks all optimal predecessors
   g_score = defaultdict(lambda: math.inf)
   g_score[start] = 0
 
-  f_score = defaultdict(lambda: math.inf)
-  f_score[start] = h(start)
-
   open_set = []
   def push(node, cost):
-    heappush(open_set, (f_score[node], node, cost))
+    heappush(open_set, (g_score[node], node, cost))
   def pop():
     return heappop(open_set)
   def is_pushed(node):
@@ -152,27 +141,44 @@ def A_Star(start, goal, h, neighbors_of):
   push(start, None)
 
   while open_set:
-    _, current, cost = pop()
+    current_g, current, cost = pop()
+    
     if current == goal:
-      return reconstruct_path(current, cost)
+      # Found the shortest cost to goal, continue processing to track all paths
+      continue  
 
-    for neighbor, cost in neighbors_of(current):
-      tentative_g_score = g_score[current] + cost
+    for neighbor, move_cost in neighbors_of(current):
+      tentative_g_score = current_g + move_cost
+
       if tentative_g_score < g_score[neighbor]:
-        came_from[neighbor] = (current, cost)
+        # Found a strictly better path
         g_score[neighbor] = tentative_g_score
-        f_score[neighbor] = tentative_g_score + h(neighbor)
+        predecessors[neighbor] = [(current, cost)]  # Reset with new optimal path
         if not is_pushed(neighbor):
-          push(neighbor, cost)
+          push(neighbor, move_cost)
 
-  # No path to goal
-  return None
+      elif tentative_g_score == g_score[neighbor]:
+        # Found an alternative optimal path
+        predecessors[neighbor].append((current, cost))
+
+  # If no path found
+  if goal not in predecessors:
+    return None
+
+  # Reconstruct all shortest paths
+  def reconstruct_paths(current):
+    if current == start:
+      return [[start]]
+    paths = []
+    for prev, _ in predecessors[current]:
+      for path in reconstruct_paths(prev):
+        paths.append(path + [current])
+    return paths
+
+  return reconstruct_paths(goal)
 
 
 def solve_maze(grid: Grid, start_pos: Position, end_pos: Position):
-  def heuristic(state: State):
-    return end_pos.distance(state.position)
-
   def neighbors_of(state: State):
     # 90º turn (if not facing wall)
     for turned_state in [
@@ -189,18 +195,21 @@ def solve_maze(grid: Grid, start_pos: Position, end_pos: Position):
 
   start = State(start_pos, EAST)
   end = State(end_pos, NORTH)  # orientation at end should be ignored, but this works for my input regardless
-  return A_Star(start, end, heuristic, neighbors_of)
+  return Dijkstra(start, end, neighbors_of)
 
 
 def main():
   grid, start, end = read_input()
-  path = solve_maze(grid, start, end)
-  if not path:
+  paths = solve_maze(grid, start, end)
+  if not paths:
     print("Failed to solve maze :(")
   else:
-    visualize(grid, [p[0] for p in path])
-    cost = sum([p[1] for p in path])
-    print("Solved maze with cost %d" % cost)
+    print(f"Found {len(paths)} optimal paths.")
+    distinct_positions = set()
+    for path in paths:
+      for state in path:
+        distinct_positions.add(state.position)
+    print(f"There are {len(distinct_positions)} distinct positions on all optimal paths.")
 
 
 if __name__=="__main__":
