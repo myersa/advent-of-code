@@ -180,18 +180,14 @@ def Dijkstra(start, goal, neighbors_of):
 
 def solve_maze(grid: Grid, start_pos: Position, end_pos: Position):
   def neighbors_of(state: State):
-    # 90º turn (if not facing wall)
-    for turned_state in [
-        State(state.position, turn_left(state.orientation)),
-        State(state.position, turn_right(state.orientation))
+    for direction, turn_cost in [
+        (state.orientation, 0),
+        (turn_left(state.orientation),  TURN_COST),
+        (turn_right(state.orientation), TURN_COST)
     ]:
-      if grid[turned_state.position.offset(turned_state.orientation)] != WALL:
-        yield turned_state, TURN_COST
-
-    # Forward step (if not blocked)
-    forward_pos = state.position.offset(state.orientation)
-    if grid[forward_pos] != WALL:
-      yield (State(forward_pos, state.orientation), MOVE_COST)
+      next_state = State(state.position.offset(direction), direction)
+      if grid[next_state.position] != WALL:
+        yield next_state, turn_cost + MOVE_COST
 
   start = State(start_pos, EAST)
   end = State(end_pos, NORTH)  # orientation at end should be ignored, but this works for my input regardless
