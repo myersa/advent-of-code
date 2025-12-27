@@ -1,0 +1,43 @@
+#!/usr/bin/env python3
+
+
+import operator
+import re
+
+
+# operators
+ops = {
+  "+": operator.add,
+  "*": operator.mul,
+}
+
+
+def main():
+  # Read input
+  re_whitespace = re.compile(r"\s+")
+  problems = []
+  with open("input.txt") as fh:
+    for line in fh:
+      entries = re_whitespace.split(line.rstrip())
+      problems.append(entries)
+
+  # Do calculations
+  num_rows = len(problems)
+  num_cols = len(problems[0])
+  print(f"{num_rows} rows x {num_cols} cols")
+
+  # TODO this might be a good time to learn Pandas
+  result_sum = 0
+  for col_id in range(num_cols):
+    operator = ops[problems[-1][col_id]]
+    result = int(problems[0][col_id])
+    for row_id in range(1, num_rows-1):
+      operand = int(problems[row_id][col_id])
+      result = operator(result, operand)
+    result_sum += result
+
+  print(f"Sum of all results: {result_sum}")
+
+
+if __name__=="__main__":
+  main()
