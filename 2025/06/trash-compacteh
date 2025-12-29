@@ -64,7 +64,7 @@ def part2() -> None:
   # 2-step parsing
   # Step 1: get operands "blocks" for each equation. Align by looking at operators.
   blocks = []
-  def capture_block(left: int, right: int = None):
+  def capture_block(left: int, right: int = None) -> None:
     block = []
     for operand_line in operands_lines:
       slice = operand_line[left:right-1] if right is not None else operand_line[left:]
@@ -91,6 +91,7 @@ def part2() -> None:
     operand_sets.append(operands)
   
   # Perform calculations!
+
   result_sum = 0
   for operands, operator in zip(operand_sets, operators):
     operands = iter(operands)
