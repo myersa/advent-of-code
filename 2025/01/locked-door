@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2025/day/1
+
+START_POSITION = 50
+POSITIONS = 100
+
+
+def read_input():
+  rotations = []
+  with open("input.txt") as fh:
+    for line in fh:
+      line = line.rstrip()
+      direction = line[0]
+      amount = int(line[1:])
+      if direction == 'L':
+        amount = -amount
+      rotations.append(amount)
+  
+  return rotations
+  
+
+def main():
+  rotations = read_input()
+  
+  position = START_POSITION
+  zeros = 0
+  for rotation in rotations:
+    position += rotation
+    position %= POSITIONS
+
+    # Part 1: does the rotation end at 0?
+    if position == 0:
+      zeros += 1
+
+  print(f"After {len(rotations)} rotations, the position is {position}.")
+  print(f"There were {zeros} zeros.")
+
+
+if __name__=="__main__":
+  main()
