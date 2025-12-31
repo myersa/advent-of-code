@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 # https://adventofcode.com/2025/day/1
 
+import math
+
+
 START_POSITION = 50
-POSITIONS = 100
+N_POSITIONS = 100
 
 
 def read_input():
@@ -25,12 +28,20 @@ def main():
   position = START_POSITION
   zeros = 0
   for rotation in rotations:
-    position += rotation
-    position %= POSITIONS
+    # Part 2: how many times does the rotation pass through 0? Note there are some rotations of more than 100.
+    # A rotation of Nx100 in either direction will cross 0 exactly N times, and return to the same position.
+    # Then, look at the remainder (direction matters).
 
-    # Part 1: does the rotation end at 0?
-    if position == 0:
+    full_rotations = abs(rotation) // N_POSITIONS
+    offset_rotation = int(math.copysign(abs(rotation) % N_POSITIONS, rotation))
+
+    zeros += full_rotations
+    new_position = position + offset_rotation
+
+    if (position > 0 and new_position <= 0) or new_position >= N_POSITIONS:
       zeros += 1
+
+    position = new_position % N_POSITIONS
 
   print(f"After {len(rotations)} rotations, the position is {position}.")
   print(f"There were {zeros} zeros.")
