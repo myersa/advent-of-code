@@ -30,14 +30,63 @@ def is_fresh(fresh_ranges: list[range], ingredient: int) -> bool:
   return False
 
 
-def main():
-  fresh_ranges, ingredients = read_input()
-  n_fresh = 0
-  for ingredient in ingredients:
-    if is_fresh(fresh_ranges, ingredient):
-      n_fresh += 1
+def merge_ranges(range1: range, range2: range) -> range | None:
+  left_range, right_range = (range1, range2) if range1[0] <= range2[0] else (range2, range1)
 
-  print(f"Of {len(ingredients)} ingredients, {n_fresh} are fresh.")
+  if right_range[0] in left_range:
+    if left_range[-1] in right_range:
+      # Partial overlap
+      return range(left_range[0], right_range[-1]+1)
+    else:
+      # Total overlap
+      return left_range
+
+  return None
+
+
+def merge_all_ranges(fresh_ranges):
+  while True:
+    discard_range_indeces = set()
+    new_ranges = []
+
+    for range_index, range in enumerate(fresh_ranges):
+      for other_range_index, other_range in enumerate(fresh_ranges[range_index+1:], range_index+1):
+        # Don't attempt to merge ranges that have already been merged on this pass
+        if range_index in discard_range_indeces or other_range_index in discard_range_indeces:
+          continue
+
+        new_range = merge_ranges(range, other_range)
+        if new_range is not None:
+          # print(f"Merging ranges {range} + {other_range} -> {new_range}")
+          new_ranges.append(new_range)
+          discard_range_indeces.add(range_index)
+          discard_range_indeces.add(other_range_index)
+
+          # Since 'range' has been merged+excluded, break out of the inner loop
+          break
+
+    if not new_ranges:
+      # No more merges possible
+      break
+
+    fresh_ranges = [range for range_index, range in enumerate(fresh_ranges) if range_index not in discard_range_indeces]
+    fresh_ranges.extend(new_ranges)
+
+  return fresh_ranges
+
+
+def main():
+  fresh_ranges, _ = read_input()
+
+  # Merge overlapping ranges
+  merged_ranges = merge_all_ranges(fresh_ranges)
+  print(f"Merged {len(fresh_ranges)} initial ranges into {len(merged_ranges)} non-overlapping ranges.")
+
+  n_fresh = 0
+  for merged_range in merged_ranges:
+    n_fresh += len(merged_range)
+
+  print(f"There are a total of {n_fresh} known fresh ingredients.")
 
 
 if __name__=="__main__":
