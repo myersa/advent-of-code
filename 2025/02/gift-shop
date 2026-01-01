@@ -13,18 +13,37 @@ def read_input():
     yield range(start, stop+1)
 
 
+def is_repeating(whole: str, unit: str) -> bool:
+  # len(whole) must be a multiple of len(unit)
+  if len(whole) % len(unit) != 0:
+    return False
+
+  len_quotient = len(whole) // len(unit)
+  for i in range(len_quotient-1):
+    offset = (i+1) * len(unit)
+    next_offset = (i+2) * len(unit)
+    slice = whole[offset:next_offset]
+    if slice != unit:
+      return False
+
+  return True
+
+
 def is_id_invalid(id: int) -> bool:
   """
   Detects if an ID is invalid or not.
-  To be clear, an invalid ID is one where a pattern is repeated EXACTLY TWICE.
-  3+ repetitions are A-OK apparently :P
+  An ID is invalid if it consists entirely of repeating patterns.
   """
   str_id = str(id)
-  if len(str_id) % 2 != 0:
-    return False
 
+  # See if the ID is a repeating sequence of digits, starting from single digit "unit".
   half_len = len(str_id) // 2
-  return str_id[:half_len] == str_id[half_len:]
+  for unit_len in range(1, half_len+1):
+    unit = str_id[:unit_len]
+    if is_repeating(str_id, unit):
+      return True
+
+  return False
 
 
 def main():
@@ -38,6 +57,14 @@ def main():
 
   print("Invalid IDs sum:")
   print(invalid_ids_sum)
+
+
+def test():
+  result = is_repeating("121212", "12")
+  if result != True:
+    print("Test FAILED!")
+  else:
+    print("Test passed.")
 
 
 if __name__=="__main__":
