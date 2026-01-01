@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2025/day/3
+
+
+def read_input():
+  with open("input.txt") as fh:
+    for line in fh:
+      bank = [int(digit) for digit in line.rstrip()]
+      yield bank
+
+
+def analyze_battery_bank(battery_bank: list[int]) -> int:
+  """
+  Part 1 is pretty basic: find largest 2-digit number from any 2 digits in the "bank".
+  This amounts to (1) finding the largest digit (ignoring last digit) then (2) finding largest digit after that.
+  """
+  tens_digit = -1
+  tens_digit_position = None
+  for position, digit in enumerate(battery_bank[:-1]):
+    if digit > tens_digit:
+      tens_digit = digit
+      tens_digit_position = position
+
+  ones_digit = max(battery_bank[tens_digit_position+1:])
+
+  joltage = tens_digit * 10 + ones_digit
+  return joltage
+
+
+def main():
+  total_joltage = 0
+  for battery_bank in read_input():
+    total_joltage += analyze_battery_bank(battery_bank)
+  print("Total joltage:")
+  print(total_joltage)
+
+
+if __name__=="__main__":
+  main()
