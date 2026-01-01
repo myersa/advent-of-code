@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+
+
+def read_input():
+  with open("input.txt") as fh:
+    ids_line = fh.readline()
+  ids_line.rstrip()
+
+  id_ranges = ids_line.split(",")
+  for id_range in id_ranges:
+    start, stop = [int(_) for _ in id_range.split("-", maxsplit=1)]
+    # In this problem the ranges are inclusive
+    yield range(start, stop+1)
+
+
+def is_id_invalid(id: int) -> bool:
+  """
+  Detects if an ID is invalid or not.
+  To be clear, an invalid ID is one where a pattern is repeated EXACTLY TWICE.
+  3+ repetitions are A-OK apparently :P
+  """
+  str_id = str(id)
+  if len(str_id) % 2 != 0:
+    return False
+
+  half_len = len(str_id) // 2
+  return str_id[:half_len] == str_id[half_len:]
+
+
+def main():
+  invalid_ids_sum = 0
+  for id_range in read_input():
+    # print(f"Checking {id_range}")
+    for id in id_range:
+      if is_id_invalid(id):
+        # print(id)
+        invalid_ids_sum += id
+
+  print("Invalid IDs sum:")
+  print(invalid_ids_sum)
+
+
+if __name__=="__main__":
+  main()
