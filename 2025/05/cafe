@@ -1,0 +1,44 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2025/day/5
+
+
+def read_input():
+  fresh_ranges = []
+  ingredients = []
+  with open("input.txt") as fh:
+    for line in fh:
+      line = line.rstrip()
+
+      if not line:
+        break   # end of first section
+
+      start, stop = [int(_) for _ in line.split("-", 1)]
+      fresh_ranges.append(range(start, stop+1))
+
+    for line in fh:
+      line = line.rstrip()
+      ingredients.append(int(line))
+
+  return fresh_ranges, ingredients
+
+
+def is_fresh(fresh_ranges: list[range], ingredient: int) -> bool:
+  for fresh_range in fresh_ranges:
+    if ingredient in fresh_range:
+      return True
+
+  return False
+
+
+def main():
+  fresh_ranges, ingredients = read_input()
+  n_fresh = 0
+  for ingredient in ingredients:
+    if is_fresh(fresh_ranges, ingredient):
+      n_fresh += 1
+
+  print(f"Of {len(ingredients)} ingredients, {n_fresh} are fresh.")
+
+
+if __name__=="__main__":
+  main()
