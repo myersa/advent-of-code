@@ -9,21 +9,34 @@ def read_input():
       yield bank
 
 
+def max_with_position(battery_bank: list[int], start: int, stop: int) -> tuple[int, int]:
+  max_joltage = -1
+  max_position = None
+
+  if stop <= start:
+    raise ValueError(f"stop ({stop}) must be larger than start ({start}).")
+
+  for i in range(start, stop):
+    battery_joltage = battery_bank[i]
+    if battery_joltage > max_joltage:
+      max_joltage = battery_joltage
+      max_position = i
+
+  return max_joltage, max_position
+
+
 def analyze_battery_bank(battery_bank: list[int]) -> int:
   """
-  Part 1 is pretty basic: find largest 2-digit number from any 2 digits in the "bank".
-  This amounts to (1) finding the largest digit (ignoring last digit) then (2) finding largest digit after that.
+  Part 2: must now activate 12 batteries per bank. Need an iterative approach.
   """
-  tens_digit = -1
-  tens_digit_position = None
-  for position, digit in enumerate(battery_bank[:-1]):
-    if digit > tens_digit:
-      tens_digit = digit
-      tens_digit_position = position
+  batteries = []
+  last_battery_position = -1
+  for batteries_selected in range(12):
+    battery, last_battery_position = max_with_position(
+      battery_bank, last_battery_position+1, len(battery_bank) - (11 - batteries_selected))
+    batteries.append(battery)
 
-  ones_digit = max(battery_bank[tens_digit_position+1:])
-
-  joltage = tens_digit * 10 + ones_digit
+  joltage = int("".join([str(_) for _ in batteries]))
   return joltage
 
 
