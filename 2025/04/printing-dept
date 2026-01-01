@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2025/day/4
+
+import numpy as np
+
+
+PAPER_ROLL = "@"
+MAX_ADJACENT_ROLLS = 3
+
+
+def read_input():
+  grid = []
+  with open("input.txt") as fh:
+    for line in fh:
+      line = line.rstrip()
+      grid.append(list(line))
+  return np.array(grid)
+
+
+def is_in_bounds(grid: np.array, row_id: int, col_id: int) -> bool:
+  if row_id < 0 or col_id < 0:
+    return False
+
+  if row_id >= grid.shape[0] or col_id >= grid.shape[1]:
+    return False
+
+  return True
+
+
+def neighbors(grid: np.array, row_id: int, col_id: int):
+  for i in (-1, 0, 1):
+    for j in (-1, 0, 1):
+      if i == 0 and j == 0:
+        continue
+
+      if not is_in_bounds(grid, row_id + i, col_id + j):
+        continue
+
+      yield row_id + i, col_id + j
+
+
+def can_access(grid: np.array, row_id: int, col_id: int) -> bool:
+  adjecent_rolls = 0
+  thbt = list(neighbors(grid, row_id, col_id))
+  for other_row_id, other_col_id in thbt:
+    if grid[other_row_id, other_col_id] == PAPER_ROLL:
+      adjecent_rolls += 1
+
+  return adjecent_rolls <= MAX_ADJACENT_ROLLS
+
+
+def main():
+  grid = read_input()
+  n_accessible = 0
+  for row_id in range(grid.shape[0]):
+    for col_id in range(grid.shape[1]):
+      if grid[row_id, col_id] == PAPER_ROLL and can_access(grid, row_id, col_id):
+        n_accessible += 1
+
+  print(f"Found {n_accessible} accessible rolls of paper.")
+
+
+if __name__=="__main__":
+  main()
