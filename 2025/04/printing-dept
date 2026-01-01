@@ -5,6 +5,7 @@ import numpy as np
 
 
 PAPER_ROLL = "@"
+EMPTY = "."
 MAX_ADJACENT_ROLLS = 3
 
 
@@ -51,13 +52,27 @@ def can_access(grid: np.array, row_id: int, col_id: int) -> bool:
 
 def main():
   grid = read_input()
-  n_accessible = 0
-  for row_id in range(grid.shape[0]):
-    for col_id in range(grid.shape[1]):
-      if grid[row_id, col_id] == PAPER_ROLL and can_access(grid, row_id, col_id):
-        n_accessible += 1
+  n_removed = 0
+  n_passes = 0
+  while True:
+    to_remove_coords = []
+    for row_id in range(grid.shape[0]):
+      for col_id in range(grid.shape[1]):
+        if grid[row_id, col_id] == PAPER_ROLL and can_access(grid, row_id, col_id):
+          to_remove_coords.append((row_id, col_id))
 
-  print(f"Found {n_accessible} accessible rolls of paper.")
+    if not to_remove_coords:
+      break
+
+    for row_id, col_id in to_remove_coords:
+      grid[row_id, col_id] = EMPTY
+
+    n_removed += len(to_remove_coords)
+    n_passes += 1
+
+    print(f"Pass {n_passes}: removed {len(to_remove_coords)} rolls of paper.")
+
+  print(f"Removed {n_removed} rolls of paper total, in {n_passes} passes.")
 
 
 if __name__=="__main__":
