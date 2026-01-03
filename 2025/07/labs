@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+# https://adventofcode.com/2025/day/7
+
+import numpy as np
+
+EMITTER = "S"
+SPLITTER = "^"
+BEAM = "|"
+EMPTY = "."
+
+
+def read_input():
+  grid = []
+  with open("input.txt") as fh:
+    for line in fh:
+      line = line.rstrip()
+      grid.append(list(line))
+  return np.array(grid)
+
+
+def write_output(grid):
+  with open("output.txt", "w") as fh:
+    for row in grid:
+      fh.write("".join(row) + "\n")
+  print("Wrote grid to output.txt.")
+
+
+def main():
+  grid = read_input()
+
+  # Find the emitter on the first line, at width/2
+  emitter_col_id = grid.shape[1] // 2
+  if grid[0, emitter_col_id] != EMITTER:
+    raise ValueError(f"Emitter not found at expected location (0, {emitter_col_id}).")
+
+  # Trace downwards to the end.
+  # Every time we hit a splitter, we add a new beam for the current row.
+  beams_on_prev_row = [emitter_col_id]  # Not actually a beam on this row; it's the emitter. But it works.
+  n_splits = 0
+  for row in grid[1:, :]:
+    beams_on_row = set()  # accomodate beam-merges
+    for beam_col_id in beams_on_prev_row:
+      # If there's a splitter where the beam would be, split it. Count the split.
+      if row[beam_col_id] == SPLITTER:
+        beams_on_row.add(beam_col_id-1)
+        beams_on_row.add(beam_col_id+1)
+        n_splits += 1
+      else:
+        beams_on_row.add(beam_col_id)
+
+    # Update grid for later display
+    for beam_col_id in beams_on_row:
+      row[beam_col_id] = BEAM
+
+    beams_on_prev_row = sorted(list(beams_on_row))
+
+  # Display full grid
+  write_output(grid)
+
+  print(f"There were {n_splits} splits.")
+
+
+if __name__=="__main__":
+  main()
